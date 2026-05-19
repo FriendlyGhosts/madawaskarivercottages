@@ -506,13 +506,14 @@ const amenities = [
     <div style="color:var(--color-muted);text-transform:uppercase;letter-spacing:0.18em;margin-bottom:12px;font-size:10px;">Font Tester</div>
     <div style="display:flex;flex-direction:column;gap:8px;">
       {[
-        { name: 'Josefin Slab',        label: 'Josefin Slab',        weight: '400' },
-        { name: 'Cormorant Garamond',  label: 'Cormorant Garamond',  weight: '300' },
-        { name: 'Playfair Display',    label: 'Playfair Display',    weight: '400' },
-        { name: 'DM Serif Display',    label: 'DM Serif Display',    weight: '400' },
-        { name: 'Fraunces',            label: 'Fraunces',            weight: '300' },
-        { name: 'Lora',                label: 'Lora',                weight: '400' },
-        { name: 'Libre Baskerville',   label: 'Libre Baskerville',   weight: '400' },
+        { name: 'Josefin Slab',      label: 'Josefin Slab',      weight: '400' },
+        { name: 'Cinzel Decorative', label: 'Cinzel Decorative', weight: '400' },
+        { name: 'Uncial Antiqua',    label: 'Uncial Antiqua',    weight: '400' },
+        { name: 'IM Fell English',   label: 'IM Fell English',   weight: '400' },
+        { name: 'Pirata One',        label: 'Pirata One',        weight: '400' },
+        { name: 'Rye',               label: 'Rye',               weight: '400' },
+        { name: 'Fondamento',        label: 'Fondamento',        weight: '400' },
+        { name: 'Almendra',          label: 'Almendra',          weight: '400' },
       ].map(f => (
         <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
           <input type="radio" name="font-pick" value={f.name} checked={f.name === 'Josefin Slab'} style="accent-color:var(--color-accent);flex-shrink:0;" />
