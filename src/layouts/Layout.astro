@@ -215,8 +215,9 @@ const {
               st.releaseT   = wT;
               st.engaged    = false;
             }
-          } else if (!st.releasing && Math.abs(my - surf) <= ENGAGE_DIST) {
-            st.engaged = true; st.pullX = mx; st.pullAmt = 0;
+          } else if (Math.abs(my - surf) <= ENGAGE_DIST) {
+            // Allow re-engagement even mid-pulse — every crossing fires
+            st.engaged = true; st.releasing = false; st.pullX = mx; st.pullAmt = 0;
           }
         });
         lastMX = mx;
