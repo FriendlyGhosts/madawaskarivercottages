@@ -133,7 +133,7 @@ const {
       const COOLDOWN    = 0;   // no cooldown — every crossing triggers a ripple
 
       const PULSE_SPEED = 2.2;  // px per frame — visible travel without feeling like a shockwave
-      const PULSE_DECAY = 0.007; // slow fade — pulses travel a good distance before dying
+      const PULSE_DECAY = 0.003; // slow fade — pulses travel a good distance before dying
       const PULSE_HW0   = 110;   // initial half-width of each outgoing pulse (tighter than the pull)
 
       function compY(gl: GLayer, x: number, t: number): number {
@@ -180,7 +180,7 @@ const {
         return compY(gl, x, t) + bowDeform(bowStates[li], x, t);
       }
 
-      const NW = 260;
+      const NW = 500;
       function drawGLayer(gl: GLayer, li: number) {
         const isNight = document.documentElement.classList.contains('night');
         const bY   = gl.baseRatio * wH;
