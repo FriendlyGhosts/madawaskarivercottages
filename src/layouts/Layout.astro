@@ -20,10 +20,12 @@ const {
     <meta name="description" content={description} />
     <title>{title}</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <script is:inline>if(localStorage.getItem('night-mode')==='true')document.documentElement.classList.add('night');</script>
   </head>
   <body>
     <div id="cursor-dot"></div>
     <div id="cursor-ring"></div>
+    <canvas id="wave-canvas" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none;"></canvas>
 
     <slot />
 
@@ -69,6 +71,168 @@ const {
       }, { threshold: 0.12 });
 
       reveals.forEach(el => observer.observe(el));
+
+      // Gerstner sum-of-cosines waves + per-layer bowstring surface tension
+      const waveCanvas = document.getElementById('wave-canvas') as HTMLCanvasElement;
+      const wctx = waveCanvas.getContext('2d')!;
+      let wW = 0, wH = 0;
+
+      function wResize() {
+        wW = waveCanvas.width = window.innerWidth;
+        wH = waveCanvas.height = window.innerHeight;
+      }
+      window.addEventListener('resize', wResize);
+      wResize();
+
+      let wT = 0;
+
+      type WComp = [number, number, number, number]; // [A, k, ω, φ]
+      function wc(A: number, lambda: number, speed: number, phi: number): WComp {
+        const k = (2 * Math.PI) / lambda;
+        return [A, k, k * speed, phi];
+      }
+
+      interface GLayer { baseRatio: number; comps: WComp[]; dayColor: string; nightColor: string; }
+      const gLayers: GLayer[] = [
+        { baseRatio: 0.50, dayColor: 'rgba(0,175,192,0.055)', nightColor: 'rgba(90,40,190,0.07)',
+          comps: [wc(10,760,1.8,0.00), wc(4.5,440,1.4,1.10), wc(2.0,230,1.0,2.30), wc(0.8,115,0.7,0.55)] },
+        { baseRatio: 0.60, dayColor: 'rgba(0,175,192,0.075)', nightColor: 'rgba(110,55,205,0.09)',
+          comps: [wc(9,690,1.9,0.80), wc(4.0,400,1.5,2.00), wc(1.8,210,1.1,0.90), wc(0.9,105,0.8,1.70)] },
+        { baseRatio: 0.69, dayColor: 'rgba(0,175,192,0.095)', nightColor: 'rgba(130,65,215,0.11)',
+          comps: [wc(8,720,1.7,1.60), wc(3.5,420,1.3,0.40), wc(2.2,240,0.9,2.80), wc(1.0,120,0.6,1.20)] },
+        { baseRatio: 0.77, dayColor: 'rgba(0,175,192,0.115)', nightColor: 'rgba(150,75,225,0.13)',
+          comps: [wc(7,680,2.0,2.40), wc(3.0,380,1.6,0.70), wc(1.6,200,1.2,1.80), wc(0.7,100,0.9,3.10)] },
+        { baseRatio: 0.84, dayColor: 'rgba(0,175,192,0.135)', nightColor: 'rgba(167,139,250,0.15)',
+          comps: [wc(6,640,2.1,3.20), wc(2.5,360,1.7,1.50), wc(1.4,190,1.3,0.30), wc(0.6,95,1.0,2.10)] },
+      ];
+
+      // Per-layer bowstring state — snap springs back as damped oscillation, no point-source ripple
+      interface BowState {
+        engaged: boolean; releasing: boolean;
+        pullX: number; pullAmt: number;
+        releaseAmt: number; releaseT: number;
+        cooldown: number;
+      }
+      const bowStates: BowState[] = gLayers.map(() => ({
+        engaged: false, releasing: false,
+        pullX: 0, pullAmt: 0,
+        releaseAmt: 0, releaseT: 0,
+        cooldown: 0,
+      }));
+      const ENGAGE_DIST = 11;  // px from surface to latch
+      const SNAP_DIST   = 62;  // px of pull before snap
+      const BOW_HW      = 130; // half-width of bowstring bell (px)
+      const COOLDOWN    = 18;  // frames before re-engage after spring settles
+
+      function compY(gl: GLayer, x: number, t: number): number {
+        let y = 0;
+        for (const [A, k, w, phi] of gl.comps) y += A * Math.cos(k * x + w * t + phi);
+        return y;
+      }
+
+      function bowDeform(st: BowState, x: number): number {
+        if ((!st.engaged && !st.releasing) || Math.abs(st.pullAmt) < 0.3) return 0;
+        const dx = x - st.pullX;
+        if (Math.abs(dx) >= BOW_HW) return 0;
+        return st.pullAmt * 0.5 * (1 + Math.cos(Math.PI * dx / BOW_HW));
+      }
+
+      function waveY(gl: GLayer, li: number, x: number, t: number): number {
+        return compY(gl, x, t) + bowDeform(bowStates[li], x);
+      }
+
+      const NW = 180;
+      function drawGLayer(gl: GLayer, li: number) {
+        const isNight = document.documentElement.classList.contains('night');
+        const bY   = gl.baseRatio * wH;
+        const step = wW / (NW - 1);
+        wctx.beginPath();
+        let prevY = bY + waveY(gl, li, 0, wT);
+        wctx.moveTo(0, prevY);
+        for (let i = 1; i < NW; i++) {
+          const x0 = (i - 1) * step, x1 = i * step;
+          const y1 = bY + waveY(gl, li, x1, wT);
+          wctx.quadraticCurveTo(x0, prevY, (x0 + x1) / 2, (prevY + y1) / 2);
+          prevY = y1;
+        }
+        wctx.lineTo(wW, wH);
+        wctx.lineTo(0, wH);
+        wctx.closePath();
+        wctx.fillStyle = isNight ? gl.nightColor : gl.dayColor;
+        wctx.fill();
+      }
+
+      // Mouse: bowstring surface tension, isolated per layer
+      // On snap: spring-back oscillation — no point-source ripple spawned
+      let lastMX = -1;
+      document.addEventListener('mousemove', (e) => {
+        const mx = e.clientX, my = e.clientY;
+        if (lastMX < 0) { lastMX = mx; return; }
+        bowStates.forEach(st => { if (st.cooldown > 0) st.cooldown--; });
+
+        gLayers.forEach((gl, i) => {
+          const st = bowStates[i];
+          const surf = gl.baseRatio * wH + compY(gl, mx, wT);
+
+          if (st.engaged) {
+            st.pullX   = mx;
+            st.pullAmt = my - surf;
+            if (Math.abs(st.pullAmt) >= SNAP_DIST) {
+              // Start spring-back — pullAmt animates to zero via damped oscillation
+              st.releasing  = true;
+              st.releaseAmt = st.pullAmt;
+              st.releaseT   = wT;
+              st.engaged    = false;
+            }
+          } else if (!st.releasing && st.cooldown === 0 && Math.abs(my - surf) <= ENGAGE_DIST) {
+            st.engaged = true; st.pullX = mx; st.pullAmt = 0;
+          }
+        });
+        lastMX = mx;
+      });
+
+      function animateWaves() {
+        // Animate spring-back: damped oscillation decays pullAmt to zero
+        bowStates.forEach(st => {
+          if (st.releasing) {
+            const age = wT - st.releaseT;
+            st.pullAmt = st.releaseAmt * Math.exp(-age * 0.13) * Math.cos(age * 0.28);
+            if (Math.abs(st.pullAmt) < 0.3) {
+              st.releasing = false; st.pullAmt = 0; st.cooldown = COOLDOWN;
+            }
+          }
+        });
+        wctx.clearRect(0, 0, wW, wH);
+        wT += 1;
+        gLayers.forEach((l, li) => drawGLayer(l, li));
+        requestAnimationFrame(animateWaves);
+      }
+      animateWaves();
+
+      // Hide nav on scroll down, reveal on scroll up
+      const navEl = document.querySelector('nav') as HTMLElement;
+      let lastScrollY = 0;
+      window.addEventListener('scroll', () => {
+        const y = window.scrollY;
+        if (y > lastScrollY && y > 80) {
+          navEl?.classList.add('nav-hidden');
+        } else {
+          navEl?.classList.remove('nav-hidden');
+        }
+        lastScrollY = y;
+      }, { passive: true });
+
+      // Night mode toggle
+      const modeToggle = document.getElementById('mode-toggle');
+      function updateToggleIcon() {
+        if (modeToggle) modeToggle.textContent = document.documentElement.classList.contains('night') ? '○' : '☽';
+      }
+      updateToggleIcon();
+      modeToggle?.addEventListener('click', () => {
+        const isNight = document.documentElement.classList.toggle('night');
+        localStorage.setItem('night-mode', String(isNight));
+        updateToggleIcon();
+      });
     </script>
   </body>
 </html>
