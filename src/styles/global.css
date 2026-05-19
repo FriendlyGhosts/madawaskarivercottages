@@ -3,31 +3,31 @@
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Inter:wght@300;400;500&display=swap');
 
 :root {
-  --color-bg: #f7feff;
-  --color-surface: #edf9fa;
-  --color-border: #a8dfe0;
-  --color-text: #1a3333;
-  --color-muted: #4d7f80;
-  --color-accent: #00afc0;
-  --color-accent-dim: #007f8f;
-  --color-hover: #d0f0f2;
-  --gradient-card: linear-gradient(135deg, #c5ecef, #9fd8dc);
-  --gradient-map: linear-gradient(135deg, #c5ecef, #9fd8dc);
-  --color-watermark: rgba(0, 175, 192, 0.07);
+  --color-bg: #f2ece0;
+  --color-surface: #e8e0cf;
+  --color-border: #b8a87a;
+  --color-text: #241c0c;
+  --color-muted: #7a6540;
+  --color-accent: #2e6b8a;
+  --color-accent-dim: #1d4d66;
+  --color-hover: #d8cfb8;
+  --gradient-card: linear-gradient(135deg, #b8ccb0, #98b890);
+  --gradient-map: linear-gradient(135deg, #b8ccb0, #98b890);
+  --color-watermark: rgba(46, 107, 138, 0.06);
 }
 
 html.night {
-  --color-bg: #0d0b1e;
-  --color-surface: #160f2c;
-  --color-border: #3d2d6b;
-  --color-text: #e8e0f5;
-  --color-muted: #8a7aaa;
-  --color-accent: #a78bfa;
-  --color-accent-dim: #7c5cbf;
-  --color-hover: #2d1f52;
-  --gradient-card: linear-gradient(135deg, #1e1040, #150c30);
-  --gradient-map: linear-gradient(135deg, #1e1040, #150c30);
-  --color-watermark: rgba(167, 139, 250, 0.07);
+  --color-bg: #181410;
+  --color-surface: #211c14;
+  --color-border: #3e3318;
+  --color-text: #e5dcc8;
+  --color-muted: #9a8860;
+  --color-accent: #5a9e7a;
+  --color-accent-dim: #3d7a5a;
+  --color-hover: #2e2616;
+  --gradient-card: linear-gradient(135deg, #1c2818, #121b10);
+  --gradient-map: linear-gradient(135deg, #1c2818, #121b10);
+  --color-watermark: rgba(90, 158, 122, 0.07);
 }
 
 #moon { display: none; }
@@ -69,7 +69,7 @@ h1, h2, h3, h4 {
   position: fixed;
   top: 0; left: 0;
   width: 36px; height: 36px;
-  border: 1px solid rgba(0, 175, 192, 0.5);
+  border: 1px solid rgba(46, 107, 138, 0.5);
   border-radius: 50%;
   pointer-events: none;
   z-index: 9998;
@@ -83,14 +83,14 @@ body.cursor-hover #cursor-dot {
 
 body.cursor-hover #cursor-ring {
   width: 56px; height: 56px;
-  border-color: rgba(0, 175, 192, 0.9);
+  border-color: rgba(46, 107, 138, 0.9);
 }
 
 html.night #cursor-ring {
-  border-color: rgba(167, 139, 250, 0.5);
+  border-color: rgba(90, 158, 122, 0.5);
 }
 html.night body.cursor-hover #cursor-ring {
-  border-color: rgba(167, 139, 250, 0.9);
+  border-color: rgba(90, 158, 122, 0.9);
 }
 
 .reveal {
