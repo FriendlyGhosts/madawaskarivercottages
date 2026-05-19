@@ -222,18 +222,23 @@ const {
         lastMX = e.clientX;
       });
 
-      // Touch — treat each finger move as a wave interaction
+      // Touch — interact with waves on horizontal swipes, leave vertical scroll alone
+      let lastTX = -1, lastTY = -1;
+
       document.addEventListener('touchstart', (e) => {
-        e.preventDefault();
         const t = e.touches[0];
+        lastTX = t.clientX; lastTY = t.clientY;
         handleWaveInteraction(t.clientX, t.clientY);
-      }, { passive: false });
+      }, { passive: true });
 
       document.addEventListener('touchmove', (e) => {
-        e.preventDefault();
         const t = e.touches[0];
-        handleWaveInteraction(t.clientX, t.clientY);
-      }, { passive: false });
+        const dx = Math.abs(t.clientX - lastTX);
+        const dy = Math.abs(t.clientY - lastTY);
+        // Only interact when moving more sideways than up/down
+        if (dx > dy) handleWaveInteraction(t.clientX, t.clientY);
+        lastTX = t.clientX; lastTY = t.clientY;
+      }, { passive: true });
 
       function animateWaves() {
         // Check if traveling pulses have faded out
