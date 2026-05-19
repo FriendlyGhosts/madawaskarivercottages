@@ -83,7 +83,7 @@ Photos can be swapped in index.astro by changing the `photo:` field.
 - [ ] Confirm which Airbnb listing maps to which cottage address (117/143/157/165)
 - [ ] Contact form is UI only — not wired to any backend/email service yet
 - [ ] May want individual cottage detail pages (/cottages/whitetail-lodge etc.)
-- [ ] Consider embedding Airbnb iCal for availability calendar
+- [x] iCal availability calendars implemented — fetched at build time, 2-month inline calendar per cottage card + treehouse section. Gracefully degrades if Airbnb fetch fails.
 
 ## Airbnb listing IDs (all 5)
 | Listing name | ID |

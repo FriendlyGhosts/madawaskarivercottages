@@ -1,7 +1,85 @@
 ---
 import Layout from '../layouts/Layout.astro';
 
-const cottages = [
+// ─── iCal fetch + parse ───────────────────────────────────────────────────────
+
+function parseIcalBookedDates(icsText: string): string[] {
+  const dates = new Set<string>();
+  const lines = icsText.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+  let inEvent = false;
+  let dtstart = '';
+  let dtend = '';
+
+  for (const line of lines) {
+    const t = line.trim();
+    if (t === 'BEGIN:VEVENT') {
+      inEvent = true; dtstart = ''; dtend = '';
+    } else if (t === 'END:VEVENT') {
+      inEvent = false;
+      if (dtstart && dtend) {
+        let d = new Date(+dtstart.slice(0,4), +dtstart.slice(4,6)-1, +dtstart.slice(6,8));
+        const end = new Date(+dtend.slice(0,4), +dtend.slice(4,6)-1, +dtend.slice(6,8));
+        while (d < end) {
+          dates.add(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
+          d.setDate(d.getDate() + 1);
+        }
+      }
+    } else if (inEvent) {
+      const ms = line.match(/^DTSTART(?:;[^:]+)?:(\d{8})/);
+      const me = line.match(/^DTEND(?:;[^:]+)?:(\d{8})/);
+      if (ms) dtstart = ms[1];
+      if (me) dtend = me[1];
+    }
+  }
+  return [...dates].sort();
+}
+
+async function fetchBookedDates(airbnbId: string | null): Promise<string[]> {
+  if (!airbnbId) return [];
+  try {
+    const url = `https://www.airbnb.com/calendar/ical/${airbnbId}.ics?t=1`;
+    const res = await fetch(url, { headers: { 'User-Agent': 'CalendarBot/1.0' } });
+    if (!res.ok) return [];
+    return parseIcalBookedDates(await res.text());
+  } catch { return []; }
+}
+
+// ─── Calendar data builder ────────────────────────────────────────────────────
+
+const MONTH_NAMES = ['January','February','March','April','May','June',
+                     'July','August','September','October','November','December'];
+const DAY_LABELS = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+
+type CalCell = { day: number; ds: string; booked: boolean; today: boolean; past: boolean } | null;
+
+function buildCalendar(bookedDates: string[], numMonths = 2) {
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+  const booked = new Set(bookedDates);
+
+  return Array.from({ length: numMonths }, (_, m) => {
+    const ref = new Date(now.getFullYear(), now.getMonth() + m, 1);
+    const year = ref.getFullYear();
+    const month = ref.getMonth();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const firstDow = ref.getDay();
+
+    const cells: CalCell[] = [
+      ...Array.from<null>({ length: firstDow }, () => null),
+      ...Array.from({ length: daysInMonth }, (_, i) => {
+        const day = i + 1;
+        const ds = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+        return { day, ds, booked: booked.has(ds), today: ds === todayStr, past: ds < todayStr };
+      }),
+    ];
+    while (cells.length % 7 !== 0) cells.push(null);
+    return { year, month, name: MONTH_NAMES[month], cells };
+  });
+}
+
+// ─── Property data + fetch ────────────────────────────────────────────────────
+
+const cottageDefs = [
   {
     number: '117',
     name: 'Whitetail Lodge',
@@ -48,7 +126,7 @@ const cottages = [
   },
 ];
 
-const treehouse = {
+const treehouseDef = {
   name: 'The Treehouse',
   tagline: 'Lost in the canopy',
   sleeps: 2,
@@ -61,8 +139,15 @@ const treehouse = {
     '/images/cottages/cabin-heaven-4.jpg',
   ],
   airbnbId: '1042917519190055212',
-  description: 'Tucked into the forest, 650 m from the road along a rustic trail — this one isn\'t on the river. It\'s something different. No neighbours, no noise, just trees and sky. Reconnect with nature at this unforgettable escape.',
+  description: "Tucked into the forest, 650 m from the road along a rustic trail — this one isn't on the river. It's something different. No neighbours, no noise, just trees and sky. Reconnect with nature at this unforgettable escape.",
 };
+
+// Fetch all iCal feeds in parallel at build time
+const allIds = [...cottageDefs.map(c => c.airbnbId), treehouseDef.airbnbId];
+const allDates = await Promise.all(allIds.map(fetchBookedDates));
+
+const cottages = cottageDefs.map((c, i) => ({ ...c, calMonths: buildCalendar(allDates[i]) }));
+const treehouse = { ...treehouseDef, calMonths: buildCalendar(allDates[allIds.length - 1]) };
 
 const amenities = [
   { icon: '◈', label: 'Private Riverfront Dock' },
@@ -212,6 +297,33 @@ const amenities = [
                 </div>
               </div>
               <p class="text-sm leading-relaxed mt-4" style="color: var(--color-muted)">{c.description}</p>
+
+              {/* Availability calendar */}
+              <div class="cal-wrap mt-6 pt-6" style="border-top: 1px solid var(--color-border)">
+                <p class="text-xs tracking-[0.18em] uppercase mb-4" style="color: var(--color-accent)">
+                  {allDates[i].length > 0 ? 'Availability' : 'Contact us for availability'}
+                </p>
+                {allDates[i].length > 0 && (
+                  <div class="cal-grid">
+                    {c.calMonths.map(mon => (
+                      <div class="cal-month">
+                        <div class="cal-month-name">{mon.name} {mon.year}</div>
+                        <div class="cal-days-grid">
+                          {DAY_LABELS.map(d => <div class="cal-dow">{d}</div>)}
+                          {mon.cells.map(cell => cell === null
+                            ? <div />
+                            : <div class={`cal-day${cell.booked ? ' cal-booked' : ''}${cell.today ? ' cal-today' : ''}${cell.past ? ' cal-past' : ''}`}>{cell.day}</div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div class="cal-legend mt-3">
+                  <span class="cal-legend-item"><span class="cal-legend-dot cal-legend-avail"></span>Available</span>
+                  <span class="cal-legend-item"><span class="cal-legend-dot cal-legend-book"></span>Booked</span>
+                </div>
+              </div>
             </div>
           </div>
         ))}
@@ -253,6 +365,31 @@ const amenities = [
               Book on Airbnb
             </a>
           </div>
+
+          {/* Treehouse availability calendar */}
+          {treehouse.calMonths && allDates[allIds.length - 1].length > 0 && (
+            <div class="reveal reveal-delay-3 cal-wrap mt-8 pt-8" style="border-top: 1px solid var(--color-border)">
+              <p class="text-xs tracking-[0.18em] uppercase mb-4" style="color: var(--color-accent)">Availability</p>
+              <div class="cal-grid">
+                {treehouse.calMonths.map(mon => (
+                  <div class="cal-month">
+                    <div class="cal-month-name">{mon.name} {mon.year}</div>
+                    <div class="cal-days-grid">
+                      {DAY_LABELS.map(d => <div class="cal-dow">{d}</div>)}
+                      {mon.cells.map(cell => cell === null
+                        ? <div />
+                        : <div class={`cal-day${cell.booked ? ' cal-booked' : ''}${cell.today ? ' cal-today' : ''}${cell.past ? ' cal-past' : ''}`}>{cell.day}</div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div class="cal-legend mt-3">
+                <span class="cal-legend-item"><span class="cal-legend-dot cal-legend-avail"></span>Available</span>
+                <span class="cal-legend-item"><span class="cal-legend-dot cal-legend-book"></span>Booked</span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -385,4 +522,81 @@ const amenities = [
   nav.nav-hidden {
     transform: translateY(-100%);
   }
+
+  /* ── Availability calendar ── */
+  .cal-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+  }
+  @media (max-width: 480px) {
+    .cal-grid { grid-template-columns: 1fr; }
+  }
+  .cal-month-name {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 0.85rem;
+    letter-spacing: 0.08em;
+    color: var(--color-text);
+    margin-bottom: 0.5rem;
+  }
+  .cal-days-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+  }
+  .cal-dow {
+    font-size: 0.55rem;
+    letter-spacing: 0.05em;
+    text-align: center;
+    padding: 2px 0;
+    color: var(--color-accent);
+    text-transform: uppercase;
+  }
+  .cal-day {
+    font-size: 0.65rem;
+    text-align: center;
+    padding: 3px 1px;
+    border-radius: 2px;
+    color: var(--color-text);
+    line-height: 1.4;
+  }
+  .cal-day.cal-past {
+    color: var(--color-border);
+  }
+  .cal-day.cal-booked {
+    background: var(--color-border);
+    color: var(--color-muted);
+    text-decoration: line-through;
+    text-decoration-color: var(--color-muted);
+    opacity: 0.7;
+  }
+  .cal-day.cal-today {
+    background: var(--color-accent);
+    color: var(--color-bg);
+    font-weight: 600;
+    border-radius: 2px;
+  }
+  /* legend */
+  .cal-legend {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+  }
+  .cal-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+  .cal-legend-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 1px;
+  }
+  .cal-legend-avail { background: var(--color-text); opacity: 0.15; border: 1px solid var(--color-border); }
+  .cal-legend-book  { background: var(--color-border); }
 </style>
