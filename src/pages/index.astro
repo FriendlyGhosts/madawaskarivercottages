@@ -532,16 +532,19 @@ const amenities = [
     </div>
   </div>
   <script is:inline>
-    const fontStyleTag = document.createElement('style');
-    fontStyleTag.id = 'font-override';
-    document.head.appendChild(fontStyleTag);
-
     function applyFont(font) {
-      fontStyleTag.textContent = `h1,h2,h3,h4,[style*="serif"]{font-family:'${font}',serif!important}`;
+      const val = "'" + font + "', serif";
+      document.querySelectorAll('h1,h2,h3,h4').forEach(function(el) {
+        el.style.setProperty('font-family', val, 'important');
+      });
+      document.querySelectorAll('[style]').forEach(function(el) {
+        if (el.getAttribute('style').indexOf('serif') !== -1) {
+          el.style.setProperty('font-family', val, 'important');
+        }
+      });
     }
-
-    document.querySelectorAll('input[name="font-pick"]').forEach(radio => {
-      radio.addEventListener('change', (e) => applyFont(e.target.value));
+    document.querySelectorAll('input[name="font-pick"]').forEach(function(radio) {
+      radio.addEventListener('change', function(e) { applyFont(e.target.value); });
     });
   </script>
 </Layout>
