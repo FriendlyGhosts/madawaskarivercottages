@@ -130,15 +130,41 @@ const {
         return y;
       }
 
-      function bowDeform(st: BowState, x: number): number {
-        if ((!st.engaged && !st.releasing) || Math.abs(st.pullAmt) < 0.3) return 0;
-        const dx = x - st.pullX;
-        if (Math.abs(dx) >= BOW_HW) return 0;
-        return st.pullAmt * 0.5 * (1 + Math.cos(Math.PI * dx / BOW_HW));
+      const PULSE_SPEED = 1.4;  // px per frame — slow enough to feel like water
+      const PULSE_DECAY = 0.028; // how fast the traveling pulse fades out
+
+      function bowDeform(st: BowState, x: number, t: number): number {
+        if (!st.engaged && !st.releasing) return 0;
+
+        if (st.engaged) {
+          // Static bowstring pull
+          if (Math.abs(st.pullAmt) < 0.3) return 0;
+          const dx = x - st.pullX;
+          if (Math.abs(dx) >= BOW_HW) return 0;
+          return st.pullAmt * 0.5 * (1 + Math.cos(Math.PI * dx / BOW_HW));
+        }
+
+        // Releasing: two pulses travel outward in opposite directions
+        const age = t - st.releaseT;
+        const amp = st.releaseAmt * Math.exp(-age * PULSE_DECAY);
+        if (Math.abs(amp) < 0.3) return 0;
+
+        // Pulse width grows slightly as it disperses
+        const hw = BOW_HW + age * 0.8;
+        let result = 0;
+        // Left-traveling pulse and right-traveling pulse, each half amplitude
+        const centers = [st.pullX - PULSE_SPEED * age, st.pullX + PULSE_SPEED * age];
+        for (const cx of centers) {
+          const dx = x - cx;
+          if (Math.abs(dx) < hw) {
+            result += (amp * 0.5) * 0.5 * (1 + Math.cos(Math.PI * dx / hw));
+          }
+        }
+        return result;
       }
 
       function waveY(gl: GLayer, li: number, x: number, t: number): number {
-        return compY(gl, x, t) + bowDeform(bowStates[li], x);
+        return compY(gl, x, t) + bowDeform(bowStates[li], x, t);
       }
 
       const NW = 180;
@@ -163,7 +189,7 @@ const {
       }
 
       // Mouse: bowstring surface tension, isolated per layer
-      // On snap: spring-back oscillation — no point-source ripple spawned
+      // On snap: deformation splits into two pulses that travel outward
       let lastMX = -1;
       document.addEventListener('mousemove', (e) => {
         const mx = e.clientX, my = e.clientY;
@@ -178,7 +204,7 @@ const {
             st.pullX   = mx;
             st.pullAmt = my - surf;
             if (Math.abs(st.pullAmt) >= SNAP_DIST) {
-              // Start spring-back — pullAmt animates to zero via damped oscillation
+              // Release — deformation splits into two outward-traveling pulses
               st.releasing  = true;
               st.releaseAmt = st.pullAmt;
               st.releaseT   = wT;
@@ -192,12 +218,12 @@ const {
       });
 
       function animateWaves() {
-        // Animate spring-back: damped oscillation decays pullAmt to zero
+        // Check if traveling pulses have faded out
         bowStates.forEach(st => {
           if (st.releasing) {
             const age = wT - st.releaseT;
-            st.pullAmt = st.releaseAmt * Math.exp(-age * 0.13) * Math.cos(age * 0.28);
-            if (Math.abs(st.pullAmt) < 0.3) {
+            const amp = st.releaseAmt * Math.exp(-age * PULSE_DECAY);
+            if (Math.abs(amp) < 0.3) {
               st.releasing = false; st.pullAmt = 0; st.cooldown = COOLDOWN;
             }
           }
