@@ -78,17 +78,31 @@ const amenities = [
 
 <Layout>
   <!-- NAV -->
-  <nav class="fixed top-0 left-0 right-0 z-50 flex flex-col items-center px-8 py-4 gap-2">
-    <div class="text-2xl md:text-3xl tracking-[0.12em] uppercase" style="font-family: 'Cormorant Garamond', serif; font-weight: 400; color: var(--color-accent)">
-      Madawaska River Cottages
+  <nav class="fixed top-0 left-0 right-0 z-50 px-5 py-3 md:py-4">
+    <!-- Desktop: stacked centered layout -->
+    <div class="hidden md:flex flex-col items-center gap-2">
+      <div class="text-3xl tracking-[0.12em] uppercase" style="font-family: 'Cormorant Garamond', serif; font-weight: 400; color: var(--color-accent)">
+        Madawaska River Cottages
+      </div>
+      <div class="flex items-center gap-8 text-xs tracking-[0.18em] uppercase" style="color: var(--color-muted)">
+        <a href="#cottages" class="hover:text-[var(--color-text)] transition-colors duration-300">Cottages</a>
+        <a href="#treehouse" class="hover:text-[var(--color-text)] transition-colors duration-300">Treehouse</a>
+        <a href="#amenities" class="hover:text-[var(--color-text)] transition-colors duration-300">Amenities</a>
+        <a href="#location" class="hover:text-[var(--color-text)] transition-colors duration-300">Location</a>
+        <a href="#contact" class="hover:text-[var(--color-text)] transition-colors duration-300">Book</a>
+        <button id="mode-toggle" class="text-lg transition-all duration-300 hover:scale-110 hover:opacity-80" style="color: var(--color-accent); background: none; border: none; padding: 2px 6px;" data-hover aria-label="Toggle night mode">☽</button>
+      </div>
     </div>
-    <div class="flex items-center gap-8 text-xs tracking-[0.18em] uppercase" style="color: var(--color-muted)">
-      <a href="#cottages" class="hover:text-[var(--color-text)] transition-colors duration-300">Cottages</a>
-      <a href="#treehouse" class="hover:text-[var(--color-text)] transition-colors duration-300">Treehouse</a>
-      <a href="#amenities" class="hover:text-[var(--color-text)] transition-colors duration-300">Amenities</a>
-      <a href="#location" class="hover:text-[var(--color-text)] transition-colors duration-300">Location</a>
-      <a href="#contact" class="hover:text-[var(--color-text)] transition-colors duration-300">Book</a>
-      <button id="mode-toggle" class="text-lg transition-all duration-300 hover:scale-110 hover:opacity-80" style="color: var(--color-accent); background: none; border: none; padding: 2px 6px;" data-hover aria-label="Toggle night mode">☽</button>
+    <!-- Mobile: title left, links right -->
+    <div class="flex md:hidden items-center justify-between">
+      <div class="text-base tracking-[0.08em] uppercase leading-tight" style="font-family: 'Cormorant Garamond', serif; font-weight: 400; color: var(--color-accent)">
+        Madawaska<br/>River Cottages
+      </div>
+      <div class="flex items-center gap-4 text-[10px] tracking-[0.14em] uppercase" style="color: var(--color-muted)">
+        <a href="#cottages" class="hover:text-[var(--color-text)] transition-colors duration-300">Cottages</a>
+        <a href="#contact" class="hover:text-[var(--color-text)] transition-colors duration-300">Book</a>
+        <button id="mode-toggle" class="text-base transition-all duration-300" style="color: var(--color-accent); background: none; border: none; padding: 2px 4px;" data-hover aria-label="Toggle night mode">☽</button>
+      </div>
     </div>
   </nav>
 
@@ -362,11 +376,11 @@ const amenities = [
     100% { transform: translateY(200%); }
   }
   nav {
-    background: linear-gradient(to bottom, rgba(247,254,255,0.97) 60%, transparent);
+    background: linear-gradient(to bottom, rgba(242,236,224,0.97) 60%, transparent);
     transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   }
   html.night nav {
-    background: linear-gradient(to bottom, rgba(13,11,30,0.97) 60%, transparent);
+    background: linear-gradient(to bottom, rgba(24,20,16,0.97) 60%, transparent);
   }
   nav.nav-hidden {
     transform: translateY(-100%);

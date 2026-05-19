@@ -193,35 +193,47 @@ const {
         wctx.fill();
       }
 
-      // Mouse: bowstring surface tension, isolated per layer
-      // On snap: deformation splits into two pulses that travel outward
-      let lastMX = -1;
-      document.addEventListener('mousemove', (e) => {
-        const mx = e.clientX, my = e.clientY;
-        if (lastMX < 0) { lastMX = mx; return; }
+      // Shared wave interaction — used by both mouse and touch
+      function handleWaveInteraction(mx: number, my: number) {
         bowStates.forEach(st => { if (st.cooldown > 0) st.cooldown--; });
-
         gLayers.forEach((gl, i) => {
           const st = bowStates[i];
           const surf = gl.baseRatio * wH + compY(gl, mx, wT);
-
           if (st.engaged) {
             st.pullX   = mx;
             st.pullAmt = my - surf;
             if (Math.abs(st.pullAmt) >= SNAP_DIST) {
-              // Release — deformation splits into two outward-traveling pulses
               st.releasing  = true;
               st.releaseAmt = st.pullAmt;
               st.releaseT   = wT;
               st.engaged    = false;
             }
           } else if (Math.abs(my - surf) <= ENGAGE_DIST) {
-            // Allow re-engagement even mid-pulse — every crossing fires
             st.engaged = true; st.releasing = false; st.pullX = mx; st.pullAmt = 0;
           }
         });
-        lastMX = mx;
+      }
+
+      // Mouse
+      let lastMX = -1;
+      document.addEventListener('mousemove', (e) => {
+        if (lastMX < 0) { lastMX = e.clientX; return; }
+        handleWaveInteraction(e.clientX, e.clientY);
+        lastMX = e.clientX;
       });
+
+      // Touch — treat each finger move as a wave interaction
+      document.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        const t = e.touches[0];
+        handleWaveInteraction(t.clientX, t.clientY);
+      }, { passive: false });
+
+      document.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+        const t = e.touches[0];
+        handleWaveInteraction(t.clientX, t.clientY);
+      }, { passive: false });
 
       function animateWaves() {
         // Check if traveling pulses have faded out

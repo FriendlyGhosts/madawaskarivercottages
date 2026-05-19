@@ -33,8 +33,15 @@ html.night {
 #moon { display: none; }
 html.night #moon { display: block; }
 
-* {
-  cursor: none !important;
+@media (pointer: fine) {
+  * { cursor: none !important; }
+}
+
+#cursor-dot, #cursor-ring {
+  display: none;
+}
+@media (pointer: fine) {
+  #cursor-dot, #cursor-ring { display: block; }
 }
 
 html {
