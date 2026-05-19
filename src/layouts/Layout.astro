@@ -222,21 +222,42 @@ const {
         lastMX = e.clientX;
       });
 
-      // Touch — interact with waves on horizontal swipes, leave vertical scroll alone
+      // Touch — strum mechanic: touching near a line immediately fires a ripple.
+      // Skip the bowstring pull entirely; it doesn't translate to fat fingers.
+      const TOUCH_ZONE = 38; // px — generous hit zone for mobile
+
+      function strumWaves(cx: number, cy: number) {
+        gLayers.forEach((gl, i) => {
+          const st = bowStates[i];
+          if (st.engaged) return; // don't interrupt an active pull
+          const surf = gl.baseRatio * wH + compY(gl, cx, wT);
+          const dist = cy - surf;
+          if (Math.abs(dist) < TOUCH_ZONE) {
+            // Fire a ripple scaled by how close to centre of zone
+            const strength = SNAP_DIST * 0.75 * (1 - Math.abs(dist) / TOUCH_ZONE);
+            st.releasing  = true;
+            st.releaseAmt = strength * (dist >= 0 ? 1 : -1);
+            st.releaseT   = wT;
+            st.pullX      = cx;
+            st.pullAmt    = 0;
+          }
+        });
+      }
+
       let lastTX = -1, lastTY = -1;
 
       document.addEventListener('touchstart', (e) => {
         const t = e.touches[0];
         lastTX = t.clientX; lastTY = t.clientY;
-        handleWaveInteraction(t.clientX, t.clientY);
+        strumWaves(t.clientX, t.clientY);
       }, { passive: true });
 
       document.addEventListener('touchmove', (e) => {
         const t = e.touches[0];
         const dx = Math.abs(t.clientX - lastTX);
         const dy = Math.abs(t.clientY - lastTY);
-        // Only interact when moving more sideways than up/down
-        if (dx > dy) handleWaveInteraction(t.clientX, t.clientY);
+        // Only strum on horizontal movement — don't fire while scrolling
+        if (dx > dy) strumWaves(t.clientX, t.clientY);
         lastTX = t.clientX; lastTY = t.clientY;
       }, { passive: true });
 
