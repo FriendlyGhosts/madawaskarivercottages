@@ -119,7 +119,7 @@ const {
         releaseAmt: 0, releaseT: 0,
         cooldown: 0,
       }));
-      const ENGAGE_DIST = 11;  // px from surface to latch
+      const ENGAGE_DIST = navigator.maxTouchPoints > 0 ? 22 : 11;  // wider on touch
       const SNAP_DIST   = 62;  // px of pull before snap
       const BOW_HW      = 140; // half-width of bowstring tent (px)
       const COOLDOWN    = 0;   // no cooldown — every crossing triggers a ripple
@@ -222,43 +222,31 @@ const {
         lastMX = e.clientX;
       });
 
-      // Touch — strum mechanic: touching near a line immediately fires a ripple.
-      // Skip the bowstring pull entirely; it doesn't translate to fat fingers.
-      const TOUCH_ZONE = 38; // px — generous hit zone for mobile
-
-      function strumWaves(cx: number, cy: number) {
-        gLayers.forEach((gl, i) => {
-          const st = bowStates[i];
-          if (st.engaged) return; // don't interrupt an active pull
-          const surf = gl.baseRatio * wH + compY(gl, cx, wT);
-          const dist = cy - surf;
-          if (Math.abs(dist) < TOUCH_ZONE) {
-            // Fire a ripple scaled by how close to centre of zone
-            const strength = SNAP_DIST * 0.75 * (1 - Math.abs(dist) / TOUCH_ZONE);
-            st.releasing  = true;
-            st.releaseAmt = strength * (dist >= 0 ? 1 : -1);
-            st.releaseT   = wT;
-            st.pullX      = cx;
-            st.pullAmt    = 0;
-          }
-        });
-      }
-
+      // Touch — finger acts as an invisible cursor, same bowstring mechanic as mouse
       let lastTX = -1, lastTY = -1;
 
       document.addEventListener('touchstart', (e) => {
         const t = e.touches[0];
         lastTX = t.clientX; lastTY = t.clientY;
-        strumWaves(t.clientX, t.clientY);
+        handleWaveInteraction(t.clientX, t.clientY);
       }, { passive: true });
 
       document.addEventListener('touchmove', (e) => {
         const t = e.touches[0];
-        const dx = Math.abs(t.clientX - lastTX);
-        const dy = Math.abs(t.clientY - lastTY);
-        // Only strum on horizontal movement — don't fire while scrolling
-        if (dx > dy) strumWaves(t.clientX, t.clientY);
+        handleWaveInteraction(t.clientX, t.clientY);
         lastTX = t.clientX; lastTY = t.clientY;
+      }, { passive: true });
+
+      document.addEventListener('touchend', () => {
+        // Snap any engaged lines on finger lift
+        bowStates.forEach(st => {
+          if (st.engaged) {
+            st.releasing = true;
+            st.releaseAmt = st.pullAmt;
+            st.releaseT = wT;
+            st.engaged = false;
+          }
+        });
       }, { passive: true });
 
       function animateWaves() {
