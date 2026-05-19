@@ -208,9 +208,6 @@ const amenities = [
       </div>
     </div>
 
-    <div class="absolute right-12 top-1/2 -translate-y-1/2 hidden lg:block">
-      <div class="text-[180px] font-thin leading-none select-none" style="font-family: 'Cormorant Garamond', serif; color: var(--color-watermark)">MRC</div>
-    </div>
 
     <div class="relative z-10 text-center px-6 max-w-4xl mx-auto">
       <p class="reveal text-xs tracking-[0.35em] uppercase mb-8" style="color: var(--color-accent)">
@@ -503,6 +500,51 @@ const amenities = [
     <p class="text-xs tracking-[0.2em] uppercase mb-2" style="color: var(--color-accent)">Madawaska River Cottages</p>
     <p class="text-xs" style="color: var(--color-muted)">Griffith, Ontario · On the Madawaska River</p>
   </footer>
+
+  <!-- ⚠️ TEMP: Font tester — delete once font is chosen -->
+  <div id="font-tester" style="position:fixed;bottom:24px;right:24px;z-index:9999;background:var(--color-surface);border:1px solid var(--color-border);padding:14px 18px;font-family:'Inter',sans-serif;font-size:11px;letter-spacing:0.12em;box-shadow:0 4px 24px rgba(0,0,0,0.12);">
+    <div style="color:var(--color-muted);text-transform:uppercase;margin-bottom:10px;letter-spacing:0.2em;">Font Tester</div>
+    <div style="display:flex;flex-direction:column;gap:6px;">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;color:var(--color-text)">
+        <input type="radio" name="font-pick" value="Cormorant Garamond" checked style="accent-color:var(--color-accent)" />
+        <span style="font-family:'Cormorant Garamond',serif;font-size:15px;font-weight:300">Cormorant Garamond</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;color:var(--color-text)">
+        <input type="radio" name="font-pick" value="Playfair Display" style="accent-color:var(--color-accent)" />
+        <span style="font-family:'Playfair Display',serif;font-size:15px;font-weight:300">Playfair Display</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;color:var(--color-text)">
+        <input type="radio" name="font-pick" value="DM Serif Display" style="accent-color:var(--color-accent)" />
+        <span style="font-family:'DM Serif Display',serif;font-size:15px">DM Serif Display</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;color:var(--color-text)">
+        <input type="radio" name="font-pick" value="Fraunces" style="accent-color:var(--color-accent)" />
+        <span style="font-family:'Fraunces',serif;font-size:15px;font-weight:300">Fraunces</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;color:var(--color-text)">
+        <input type="radio" name="font-pick" value="Lora" style="accent-color:var(--color-accent)" />
+        <span style="font-family:'Lora',serif;font-size:15px;font-weight:400">Lora</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;color:var(--color-text)">
+        <input type="radio" name="font-pick" value="Libre Baskerville" style="accent-color:var(--color-accent)" />
+        <span style="font-family:'Libre Baskerville',serif;font-size:15px;font-weight:400">Libre Baskerville</span>
+      </label>
+    </div>
+  </div>
+  <script is:inline>
+    document.querySelectorAll('input[name="font-pick"]').forEach(radio => {
+      radio.addEventListener('change', (e) => {
+        const font = e.target.value;
+        document.querySelectorAll('h1,h2,h3,h4,nav .tracking-\\[0\\.12em\\]').forEach(el => {
+          el.style.fontFamily = `'${font}', serif`;
+        });
+        // Also swap all inline font-family serif declarations
+        document.querySelectorAll('[style*="Cormorant Garamond"],[style*="Playfair"],[style*="DM Serif"],[style*="Fraunces"],[style*="Lora"],[style*="Libre Baskerville"]').forEach(el => {
+          el.style.fontFamily = `'${font}', serif`;
+        });
+      });
+    });
+  </script>
 </Layout>
 
 <style>
