@@ -34,11 +34,10 @@ function parseIcalBookedDates(icsText: string): string[] {
   return [...dates].sort();
 }
 
-async function fetchBookedDates(airbnbId: string | null): Promise<string[]> {
-  if (!airbnbId) return [];
+async function fetchBookedDates(icalUrl: string | null): Promise<string[]> {
+  if (!icalUrl) return [];
   try {
-    const url = `https://www.airbnb.com/calendar/ical/${airbnbId}.ics?t=1`;
-    const res = await fetch(url, { headers: { 'User-Agent': 'CalendarBot/1.0' } });
+    const res = await fetch(icalUrl, { headers: { 'User-Agent': 'Mozilla/5.0' } });
     if (!res.ok) return [];
     return parseIcalBookedDates(await res.text());
   } catch { return []; }
@@ -87,8 +86,9 @@ const cottageDefs = [
     sleeps: 4,
     bedDetail: '1 double + 1 queen · 2 bed · 1 bath',
     pets: true,
-    photo: '/images/cottages/cozy-riverfront-1.jpg',
-    airbnbId: '895861420839792739',
+    photo: '/images/cottages/tucked-away-1.jpg',
+    airbnbId: '679589509313140703',
+    icalUrl: 'https://www.airbnb.ca/calendar/ical/679589509313140703.ics?t=2406443036c346718124201677870044',
     description: 'A private two-bedroom cabin on the Madawaska. Hike the Uplands Trail, boulder at Calabogie, kayak the rapids, or spend a lazy afternoon paddleboarding. End your day at the fire pit under the stars.',
   },
   {
@@ -98,8 +98,9 @@ const cottageDefs = [
     sleeps: 4,
     bedDetail: '2 bedrooms · 2 beds · 1 bath',
     pets: false,
-    photo: '/images/cottages/magical-wintertime-1.jpg',
-    airbnbId: '1037163450739528690',
+    photo: '/images/cottages/cozy-riverfront-1.jpg',
+    airbnbId: '895861420839792739',
+    icalUrl: 'https://www.airbnb.ca/calendar/ical/895861420839792739.ics?t=0410eea1e1f54d79b84c49a1a4c43c1a',
     description: 'Nestled on 2 secluded acres right on the river. Thousands of acres of wild, rolling landscape and hidden lakes wait to be discovered — and a smoldering fire will be waiting for your return.',
   },
   {
@@ -109,8 +110,9 @@ const cottageDefs = [
     sleeps: 4,
     bedDetail: '2 bedrooms · 1 bath',
     pets: false,
-    photo: '/images/cottages/tucked-away-1.jpg',
-    airbnbId: '679589509313140703',
+    photo: '/images/cottages/magical-wintertime-1.jpg',
+    airbnbId: '1037163450739528690',
+    icalUrl: 'https://www.airbnb.ca/calendar/ical/1037163450739528690.ics?t=a7116dfe254144de9345e479c481dddd',
     description: 'Tucked away in the forest, right on the Madawaska. Private river access for paddleboarding, kayaking, and canoeing. Early risers catch the morning mist from the dock with a cup of tea.',
   },
   {
@@ -122,6 +124,7 @@ const cottageDefs = [
     pets: true,
     photo: null,
     airbnbId: null,
+    icalUrl: null,
     description: 'Spacious and comfortable with room for the whole crew. A full kitchen, large living area, fire pit, and private dock on the Madawaska River.',
   },
 ];
@@ -139,15 +142,16 @@ const treehouseDef = {
     '/images/cottages/cabin-heaven-4.jpg',
   ],
   airbnbId: '1042917519190055212',
+  icalUrl: 'https://www.airbnb.ca/calendar/ical/1042917519190055212.ics?t=2c3e8664ed5f40e987f75f61a727f200',
   description: "Tucked into the forest, 650 m from the road along a rustic trail — this one isn't on the river. It's something different. No neighbours, no noise, just trees and sky. Reconnect with nature at this unforgettable escape.",
 };
 
 // Fetch all iCal feeds in parallel at build time
-const allIds = [...cottageDefs.map(c => c.airbnbId), treehouseDef.airbnbId];
-const allDates = await Promise.all(allIds.map(fetchBookedDates));
+const icalUrls = [...cottageDefs.map(c => c.icalUrl), treehouseDef.icalUrl];
+const allDates = await Promise.all(icalUrls.map(fetchBookedDates));
 
 const cottages = cottageDefs.map((c, i) => ({ ...c, calMonths: buildCalendar(allDates[i]) }));
-const treehouse = { ...treehouseDef, calMonths: buildCalendar(allDates[allIds.length - 1]) };
+const treehouse = { ...treehouseDef, calMonths: buildCalendar(allDates[icalUrls.length - 1]) };
 
 const amenities = [
   { icon: '◈', label: 'Private Riverfront Dock' },
