@@ -122,7 +122,7 @@ const {
       const ENGAGE_DIST = 11;  // px from surface to latch
       const SNAP_DIST   = 62;  // px of pull before snap
       const BOW_HW      = 140; // half-width of bowstring tent (px)
-      const COOLDOWN    = 4;   // frames before re-engage — nearly instant
+      const COOLDOWN    = 0;   // no cooldown — every crossing triggers a ripple
 
       const PULSE_SPEED = 2.2;  // px per frame — visible travel without feeling like a shockwave
       const PULSE_DECAY = 0.018; // slow fade — pulses travel a good distance before dying
@@ -215,7 +215,7 @@ const {
               st.releaseT   = wT;
               st.engaged    = false;
             }
-          } else if (!st.releasing && st.cooldown === 0 && Math.abs(my - surf) <= ENGAGE_DIST) {
+          } else if (!st.releasing && Math.abs(my - surf) <= ENGAGE_DIST) {
             st.engaged = true; st.pullX = mx; st.pullAmt = 0;
           }
         });
