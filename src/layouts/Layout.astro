@@ -121,8 +121,12 @@ const {
       }));
       const ENGAGE_DIST = 11;  // px from surface to latch
       const SNAP_DIST   = 62;  // px of pull before snap
-      const BOW_HW      = 130; // half-width of bowstring bell (px)
-      const COOLDOWN    = 18;  // frames before re-engage after spring settles
+      const BOW_HW      = 140; // half-width of bowstring tent (px)
+      const COOLDOWN    = 4;   // frames before re-engage — nearly instant
+
+      const PULSE_SPEED = 2.2;  // px per frame — visible travel without feeling like a shockwave
+      const PULSE_DECAY = 0.018; // slow fade — pulses travel a good distance before dying
+      const PULSE_HW0   = 80;   // initial half-width of each outgoing pulse (tighter than the pull)
 
       function compY(gl: GLayer, x: number, t: number): number {
         let y = 0;
@@ -130,34 +134,35 @@ const {
         return y;
       }
 
-      const PULSE_SPEED = 1.4;  // px per frame — slow enough to feel like water
-      const PULSE_DECAY = 0.028; // how fast the traveling pulse fades out
+      // Tent shape: straight lines from base to a sharp peak — real bowstring geometry
+      function tent(dx: number, hw: number): number {
+        const t = 1 - Math.abs(dx) / hw;
+        return t > 0 ? t : 0;
+      }
 
       function bowDeform(st: BowState, x: number, t: number): number {
         if (!st.engaged && !st.releasing) return 0;
 
         if (st.engaged) {
-          // Static bowstring pull
+          // Tent-shaped pull: sharp peak at cursor, straight lines to either side
           if (Math.abs(st.pullAmt) < 0.3) return 0;
           const dx = x - st.pullX;
           if (Math.abs(dx) >= BOW_HW) return 0;
-          return st.pullAmt * 0.5 * (1 + Math.cos(Math.PI * dx / BOW_HW));
+          return st.pullAmt * tent(dx, BOW_HW);
         }
 
-        // Releasing: two pulses travel outward in opposite directions
+        // Releasing: two tent pulses travel outward, each with good amplitude
         const age = t - st.releaseT;
         const amp = st.releaseAmt * Math.exp(-age * PULSE_DECAY);
         if (Math.abs(amp) < 0.3) return 0;
 
-        // Pulse width grows slightly as it disperses
-        const hw = BOW_HW + age * 0.8;
+        // Pulse widens as it disperses (water dispersion)
+        const hw = PULSE_HW0 + age * 1.4;
         let result = 0;
-        // Left-traveling pulse and right-traveling pulse, each half amplitude
-        const centers = [st.pullX - PULSE_SPEED * age, st.pullX + PULSE_SPEED * age];
-        for (const cx of centers) {
+        for (const cx of [st.pullX - PULSE_SPEED * age, st.pullX + PULSE_SPEED * age]) {
           const dx = x - cx;
           if (Math.abs(dx) < hw) {
-            result += (amp * 0.5) * 0.5 * (1 + Math.cos(Math.PI * dx / hw));
+            result += amp * 0.55 * tent(dx, hw);
           }
         }
         return result;
