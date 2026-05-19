@@ -22,7 +22,7 @@ const {
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Josefin+Slab:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Cinzel+Decorative:wght@400;700&family=Uncial+Antiqua&family=Pirata+One&family=Fondamento:ital@0;1&family=Metamorphous&family=Caesar+Dressing&family=Butcherman&family=Mystery+Quest&family=Cormorant:ital,wght@0,300;0,400;1,300&family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;1,6..96,400&family=Poiret+One&family=Inter:wght@300;400;500&display=swap" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Josefin+Slab:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Cinzel+Decorative:wght@400;700&family=Uncial+Antiqua&family=Pirata+One&family=Fondamento:ital@0;1&family=Metamorphous&family=Caesar+Dressing&family=Mystery+Quest&family=Cormorant:ital,wght@0,300;0,400;1,300&family=Cormorant+Unicase:wght@300;400;500&family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;1,6..96,400&family=Poiret+One&family=Inter:wght@300;400;500&display=swap" />
     <script is:inline>if(localStorage.getItem('night-mode')==='true')document.documentElement.classList.add('night');</script>
   </head>
   <body>
@@ -133,8 +133,8 @@ const {
       const COOLDOWN    = 0;   // no cooldown — every crossing triggers a ripple
 
       const PULSE_SPEED = 2.2;  // px per frame — visible travel without feeling like a shockwave
-      const PULSE_DECAY = 0.018; // slow fade — pulses travel a good distance before dying
-      const PULSE_HW0   = 80;   // initial half-width of each outgoing pulse (tighter than the pull)
+      const PULSE_DECAY = 0.007; // slow fade — pulses travel a good distance before dying
+      const PULSE_HW0   = 110;   // initial half-width of each outgoing pulse (tighter than the pull)
 
       function compY(gl: GLayer, x: number, t: number): number {
         let y = 0;
@@ -170,7 +170,7 @@ const {
         for (const cx of [st.pullX - PULSE_SPEED * age, st.pullX + PULSE_SPEED * age]) {
           const dx = x - cx;
           if (Math.abs(dx) < hw) {
-            result += amp * 0.55 * tent(dx, hw);
+            result += amp * 0.7 * tent(dx, hw);
           }
         }
         return result;
