@@ -122,3 +122,13 @@ html.night body.cursor-hover #cursor-ring {
   height: 1px;
   background: var(--color-accent);
 }
+
+/* Nav: transparent in day, dark-teal backdrop in night */
+nav {
+  background: transparent;
+}
+html.night nav {
+  background: rgba(8, 18, 14, 0.88);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
