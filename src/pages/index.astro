@@ -440,7 +440,7 @@ const amenities = [
         </div>
         <div class="reveal reveal-delay-2 relative overflow-hidden" style="height: 400px; border: 1px solid var(--color-border)">
           <iframe
-            src="https://www.openstreetmap.org/export/embed.html?bbox=-77.12%2C45.16%2C-77.02%2C45.22&layer=mapnik&marker=45.19%2C-77.07"
+            src="https://www.openstreetmap.org/export/embed.html?bbox=-77.27%2C45.22%2C-77.17%2C45.28&layer=mapnik&marker=45.2513%2C-77.2187"
             width="100%" height="100%" style="border:0; display:block; filter: saturate(0.7) contrast(0.9);"
             loading="lazy" title="Griffith, Ontario map"
           ></iframe>
@@ -460,17 +460,17 @@ const amenities = [
       <div class="reveal reveal-delay-2" style="position:relative;min-height:220px;">
         <div id="reviews-track" style="position:relative;">
           {[
-            { quote: "One of the most peaceful places we've ever stayed. Woke up every morning to the sound of the river. The dock is incredible at sunrise.", name: "Sarah M.", location: "Ottawa, ON", stars: 5 },
-            { quote: "The cottage was exactly as described — private, well-equipped, and absolutely beautiful. Kids loved the kayaks. We'll be back every summer.", name: "James T.", location: "Toronto, ON", stars: 5 },
-            { quote: "We came for a long weekend and ended up staying the full week. The forest trail to the water is magical. Completely disconnected from everything.", name: "Émilie R.", location: "Montréal, QC", stars: 5 },
-            { quote: "Perfect escape from the city. The fire pit under the stars sealed the deal. Hosts were incredibly responsive and thoughtful.", name: "Mark & Lisa B.", location: "Kingston, ON", stars: 5 },
-            { quote: "Stayed in the Treehouse — it was like nothing we've ever done. 650m into the forest, complete silence. Genuinely unforgettable.", name: "Chris D.", location: "Ottawa, ON", stars: 5 },
+            { quote: "The property is wonderful. Everything that we would want. Could not have asked for more even if we designed it ourselves. The dogs loved it too. What a great place to come home to after some great whitewater canoeing and hiking. We hope to return again soon!", name: "Scot N.", stars: 5 },
+            { quote: "The property and cottage were exactly what we were looking for. The hosts really thought of everything, and were incredibly gracious and helpful. Highly recommend for anyone looking for a place to rest and recharge. Fantastic value.", name: "Tim C.", stars: 5 },
+            { quote: "Our stay was excellent. Hosts were kind and attentive, quick to respond to any questions. The river was great for swimming and canoeing and the view was lovely. Highly recommended and perfect for a quiet cottage getaway.", name: "John H.", stars: 5 },
+            { quote: "Beautiful property and waterfront. Very well kept and very well equipped. Helpful and welcoming hosts.", name: "Danny M.", stars: 5 },
+            { quote: "The cottage is pristine and equipped with absolutely everything you could need. Ample space for a family inside and out. The river is gorgeous and we enjoyed several trips using the canoe. If you're looking for a peaceful relaxing place to stay with outdoor activities you will not find anything better.", name: "Lynn H.", stars: 5 },
           ].map((r, i) => (
             <div class="review-card" data-index={i} style={`display:${i === 0 ? 'block' : 'none'};`}>
               <div class="text-center px-4 md:px-16">
                 <div class="mb-6" style="color: var(--color-accent); letter-spacing: 0.2em; font-size: 13px;">{'★'.repeat(r.stars)}</div>
                 <p class="text-xl md:text-2xl font-light leading-relaxed mb-8" style={`font-family:'Cormorant',serif; color: var(--color-text)`}>"{r.quote}"</p>
-                <div class="text-xs tracking-[0.18em] uppercase" style="color: var(--color-muted)">{r.name} · {r.location}</div>
+                <div class="text-xs tracking-[0.18em] uppercase" style="color: var(--color-muted)">{r.name}</div>
               </div>
             </div>
           ))}
@@ -500,8 +500,9 @@ const amenities = [
       // Fix calendar today marker using browser local date
       var today = new Date();
       var ds = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
-      var el = document.querySelector('[data-date="' + ds + '"]');
-      if (el) el.classList.add('cal-today');
+      document.querySelectorAll('[data-date="' + ds + '"]').forEach(function(el) {
+        el.classList.add('cal-today');
+      });
     })();
   </script>
 
@@ -560,7 +561,7 @@ const amenities = [
       var r = ring.R;
       for (var j = 0; j < ring.comps.length; j++) {
         var c = ring.comps[j];
-        r += c[0] * Math.cos(c[1] * theta + 0.014 * c[1] * t + c[2]);
+        r += c[0] * Math.cos(c[1] * theta + 0.0018 * c[1] * t + c[2]);
       }
       return r;
     }
