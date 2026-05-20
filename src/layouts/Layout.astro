@@ -142,24 +142,23 @@ const {
         return y;
       }
 
-      // Tent shape: straight lines from base to a sharp peak — real bowstring geometry
-      function tent(dx: number, hw: number): number {
-        const t = 1 - Math.abs(dx) / hw;
-        return t > 0 ? t : 0;
+      // Cosine bell: smooth rounded peak, continuous derivatives everywhere — no spikes
+      function bell(dx: number, hw: number): number {
+        if (Math.abs(dx) >= hw) return 0;
+        return 0.5 * (1 + Math.cos(Math.PI * dx / hw));
       }
 
       function bowDeform(st: BowState, x: number, t: number): number {
         if (!st.engaged && !st.releasing) return 0;
 
         if (st.engaged) {
-          // Tent-shaped pull: sharp peak at cursor, straight lines to either side
           if (Math.abs(st.pullAmt) < 0.3) return 0;
           const dx = x - st.pullX;
           if (Math.abs(dx) >= BOW_HW) return 0;
-          return st.pullAmt * tent(dx, BOW_HW);
+          return st.pullAmt * bell(dx, BOW_HW);
         }
 
-        // Releasing: two tent pulses travel outward, each with good amplitude
+        // Releasing: two bell pulses travel outward
         const age = t - st.releaseT;
         const amp = st.releaseAmt * Math.exp(-age * PULSE_DECAY);
         if (Math.abs(amp) < 0.3) return 0;
@@ -170,7 +169,7 @@ const {
         for (const cx of [st.pullX - PULSE_SPEED * age, st.pullX + PULSE_SPEED * age]) {
           const dx = x - cx;
           if (Math.abs(dx) < hw) {
-            result += amp * 0.7 * tent(dx, hw);
+            result += amp * 0.7 * bell(dx, hw);
           }
         }
         return result;
