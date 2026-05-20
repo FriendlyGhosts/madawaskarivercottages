@@ -771,21 +771,21 @@ const amenities = [
       <form class="reveal reveal-delay-3 space-y-4 text-left" id="contact-form">
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label class="block text-xs tracking-[0.15em] uppercase mb-2" style="color: var(--color-muted)">First Name</label>
-            <input type="text" class="w-full px-4 py-3 text-sm bg-transparent border outline-none focus:border-[var(--color-accent)] transition-colors duration-300" style="border-color: var(--color-border); color: var(--color-text)" />
+            <label class="block text-xs tracking-[0.15em] uppercase mb-2" style="color: var(--color-muted)">First Name *</label>
+            <input type="text" name="firstName" required class="w-full px-4 py-3 text-sm bg-transparent border outline-none focus:border-[var(--color-accent)] transition-colors duration-300" style="border-color: var(--color-border); color: var(--color-text)" />
           </div>
           <div>
             <label class="block text-xs tracking-[0.15em] uppercase mb-2" style="color: var(--color-muted)">Last Name</label>
-            <input type="text" class="w-full px-4 py-3 text-sm bg-transparent border outline-none focus:border-[var(--color-accent)] transition-colors duration-300" style="border-color: var(--color-border); color: var(--color-text)" />
+            <input type="text" name="lastName" class="w-full px-4 py-3 text-sm bg-transparent border outline-none focus:border-[var(--color-accent)] transition-colors duration-300" style="border-color: var(--color-border); color: var(--color-text)" />
           </div>
         </div>
         <div>
-          <label class="block text-xs tracking-[0.15em] uppercase mb-2" style="color: var(--color-muted)">Email</label>
-          <input type="email" class="w-full px-4 py-3 text-sm bg-transparent border outline-none focus:border-[var(--color-accent)] transition-colors duration-300" style="border-color: var(--color-border); color: var(--color-text)" />
+          <label class="block text-xs tracking-[0.15em] uppercase mb-2" style="color: var(--color-muted)">Email *</label>
+          <input type="email" name="email" required class="w-full px-4 py-3 text-sm bg-transparent border outline-none focus:border-[var(--color-accent)] transition-colors duration-300" style="border-color: var(--color-border); color: var(--color-text)" />
         </div>
         <div>
           <label class="block text-xs tracking-[0.15em] uppercase mb-2" style="color: var(--color-muted)">Cabin</label>
-          <select class="w-full px-4 py-3 text-sm border outline-none focus:border-[var(--color-accent)] transition-colors duration-300 appearance-none" style="background: var(--color-surface); border-color: var(--color-border); color: var(--color-text)">
+          <select name="cabin" class="w-full px-4 py-3 text-sm border outline-none focus:border-[var(--color-accent)] transition-colors duration-300 appearance-none" style="background: var(--color-surface); border-color: var(--color-border); color: var(--color-text)">
             <option value="">Select a cabin</option>
             <option>Whitetail Lodge (117) — Sleeps 4</option>
             <option>Owl's Nest (143) — Sleeps 4</option>
@@ -796,13 +796,19 @@ const amenities = [
           </select>
         </div>
         <div>
-          <label class="block text-xs tracking-[0.15em] uppercase mb-2" style="color: var(--color-muted)">Message & Dates</label>
-          <textarea rows="4" class="w-full px-4 py-3 text-sm bg-transparent border outline-none focus:border-[var(--color-accent)] transition-colors duration-300 resize-none" style="border-color: var(--color-border); color: var(--color-text)" placeholder="Tell us your preferred dates and anything else..."></textarea>
+          <label class="block text-xs tracking-[0.15em] uppercase mb-2" style="color: var(--color-muted)">Message & Dates *</label>
+          <textarea name="message" rows="4" required class="w-full px-4 py-3 text-sm bg-transparent border outline-none focus:border-[var(--color-accent)] transition-colors duration-300 resize-none" style="border-color: var(--color-border); color: var(--color-text)" placeholder="Tell us your preferred dates and anything else..."></textarea>
         </div>
-        <button type="submit" class="w-full py-4 text-xs tracking-[0.25em] uppercase transition-all duration-300 hover:opacity-90" style="background: var(--color-accent); color: var(--color-bg)" data-hover>
+        <div id="contact-error" style="display:none; color:#c0392b; font-size:13px; padding: 10px 0;"></div>
+        <button type="submit" id="contact-submit" class="w-full py-4 text-xs tracking-[0.25em] uppercase transition-all duration-300 hover:opacity-90" style="background: var(--color-accent); color: var(--color-bg)" data-hover>
           Send Enquiry
         </button>
       </form>
+      <div id="contact-success" style="display:none;" class="reveal text-center py-12">
+        <div style="font-size: 32px; margin-bottom: 16px;">✓</div>
+        <h3 class="text-2xl font-light mb-3" style="font-family: 'Cormorant', serif; color: var(--color-accent)">Message sent</h3>
+        <p class="text-sm" style="color: var(--color-muted)">We'll be in touch soon. Talk soon.</p>
+      </div>
     </div>
   </section>
 
@@ -851,6 +857,48 @@ const amenities = [
     }
     document.querySelectorAll('input[name="font-pick"]').forEach(function(r) {
       r.addEventListener('change', function(e) { applyFont(e.target.value); });
+    });
+  </script>
+
+  <script>
+    const form = document.getElementById('contact-form') as HTMLFormElement | null;
+    const submitBtn = document.getElementById('contact-submit') as HTMLButtonElement | null;
+    const errorEl = document.getElementById('contact-error') as HTMLElement | null;
+    const successEl = document.getElementById('contact-success') as HTMLElement | null;
+
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!submitBtn || !errorEl || !successEl) return;
+
+      errorEl.style.display = 'none';
+      submitBtn.textContent = 'Sending…';
+      submitBtn.disabled = true;
+
+      const data = Object.fromEntries(new FormData(form));
+
+      try {
+        const res = await fetch('/api/contact', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+        const json = await res.json();
+
+        if (!res.ok || json.error) {
+          errorEl.textContent = json.error || 'Something went wrong. Please try again.';
+          errorEl.style.display = 'block';
+          submitBtn.textContent = 'Send Enquiry';
+          submitBtn.disabled = false;
+        } else {
+          form.style.display = 'none';
+          successEl.style.display = 'block';
+        }
+      } catch {
+        errorEl.textContent = 'Network error. Please check your connection and try again.';
+        errorEl.style.display = 'block';
+        submitBtn.textContent = 'Send Enquiry';
+        submitBtn.disabled = false;
+      }
     });
   </script>
 
