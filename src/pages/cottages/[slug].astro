@@ -118,6 +118,7 @@ export async function getStaticPaths() {
       pets: true,
       photoFolder: 'drone-117',
       photoCount: 15,
+      heroPhoto: 14,
       airbnbId: '679589509313140703',
       icalUrl: 'https://www.airbnb.ca/calendar/ical/679589509313140703.ics?t=2406443036c346718124201677870044',
       description: 'A private two-bedroom cabin set right on the Madawaska. Hike the Uplands Trail, boulder at Calabogie, kayak the rapids, or spend a lazy afternoon paddleboarding. End your day at the fire pit under the stars.',
@@ -136,6 +137,7 @@ export async function getStaticPaths() {
       pets: false,
       photoFolder: 'drone-143',
       photoCount: 13,
+      heroPhoto: 13,
       airbnbId: '895861420839792739',
       icalUrl: 'https://www.airbnb.ca/calendar/ical/895861420839792739.ics?t=0410eea1e1f54d79b84c49a1a4c43c1a',
       description: 'Nestled on 2 secluded acres right on the river. Thousands of acres of wild, rolling landscape and hidden lakes wait to be discovered — and a smoldering fire will be waiting for your return.',
@@ -154,6 +156,7 @@ export async function getStaticPaths() {
       pets: false,
       photoFolder: 'drone-157',
       photoCount: 10,
+      heroPhoto: 10,
       airbnbId: '1037163450739528690',
       icalUrl: 'https://www.airbnb.ca/calendar/ical/1037163450739528690.ics?t=a7116dfe254144de9345e479c481dddd',
       description: 'Tucked away in the forest, right on the Madawaska. Private river access for paddleboarding, kayaking, and canoeing. Early risers catch the morning mist from the dock with a cup of tea.',
@@ -172,6 +175,7 @@ export async function getStaticPaths() {
       pets: true,
       photoFolder: 'drone-165',
       photoCount: 11,
+      heroPhoto: 3,
       airbnbId: null,
       icalUrl: null,
       description: 'Spacious and comfortable with room for the whole crew. A full kitchen, large living area, fire pit, and private dock on the Madawaska River.',
@@ -190,6 +194,7 @@ export async function getStaticPaths() {
       pets: false,
       photoFolder: 'cabin-heaven',
       photoCount: 4,
+      heroPhoto: 1,
       airbnbId: '1042917519190055212',
       icalUrl: 'https://www.airbnb.ca/calendar/ical/1042917519190055212.ics?t=2c3e8664ed5f40e987f75f61a727f200',
       description: "Tucked into the forest, 650 m from the road along a rustic trail — this one isn't on the river. It's something different. No neighbours, no noise, just trees and sky.",
@@ -220,6 +225,7 @@ interface Props {
   pets: boolean;
   photoFolder: string;
   photoCount: number;
+  heroPhoto: number;
   airbnbId: string | null;
   rate: number;
   description: string;
@@ -231,12 +237,13 @@ interface Props {
 
 const {
   name, tagline, sleeps, bedDetail, pets,
-  photoFolder, photoCount, airbnbId, rate,
+  photoFolder, photoCount, heroPhoto, airbnbId, rate,
   longDescription, isTreehouse, features, bookedDates,
 } = Astro.props;
 
 const number = Astro.props.number;
-const photos = Array.from({ length: photoCount }, (_, i) => `/images/cottages/${photoFolder}-${i + 1}.jpg`);
+const photos    = Array.from({ length: photoCount }, (_, i) => `/images/cottages/${photoFolder}-${i + 1}.jpg`);
+const bannerSrc = `/images/cottages/${photoFolder}-${heroPhoto}.jpg`;
 const calMonths = buildSummerCalendar(bookedDates);
 const calYear = calMonths[0].year;
 ---
@@ -268,50 +275,25 @@ const calYear = calMonths[0].year;
       position: relative; width: 100%;
       height: 62vh; min-height: 320px; max-height: 680px;
       background: var(--color-surface); overflow: hidden;
+      cursor: zoom-in;
     }
-    .gallery-img {
-      position: absolute; inset: 0;
+    #gallery-hero {
       width: 100%; height: 100%; object-fit: cover;
-      opacity: 0; transition: opacity 0.6s ease;
+      display: block;
     }
-    .gallery-img.active { opacity: 1; }
-    .gallery-btn {
-      position: absolute; top: 50%; transform: translateY(-50%);
-      width: 44px; height: 44px; border-radius: 50%;
-      border: 1px solid rgba(255,255,255,0.4);
-      background: rgba(0,0,0,0.28); backdrop-filter: blur(4px);
-      color: #fff; font-size: 22px; line-height: 1;
-      display: flex; align-items: center; justify-content: center;
-      cursor: pointer; z-index: 2;
+
+    /* "View all photos" button */
+    #gallery-expand {
+      position: absolute; bottom: 16px; right: 16px; z-index: 3;
+      background: rgba(0,0,0,0.46); backdrop-filter: blur(6px);
+      border: 1px solid rgba(255,255,255,0.28); border-radius: 5px;
+      color: rgba(255,255,255,0.92); font-size: 12px;
+      letter-spacing: 0.06em; padding: 7px 12px;
+      display: flex; align-items: center; gap: 6px;
+      cursor: pointer;
       transition: background 0.2s, border-color 0.2s;
     }
-    .gallery-btn:hover { background: rgba(0,0,0,0.55); border-color: rgba(255,255,255,0.7); }
-    #gallery-prev { left: 16px; }
-    #gallery-next { right: 16px; }
-    .gallery-dots {
-      position: absolute; bottom: 14px; left: 50%;
-      transform: translateX(-50%); display: flex; gap: 6px; z-index: 2;
-    }
-    .gallery-dot {
-      width: 6px; height: 6px; border-radius: 50%;
-      background: rgba(255,255,255,0.45); border: none; padding: 0;
-      cursor: pointer; transition: background 0.3s, transform 0.2s;
-    }
-    .gallery-dot.active { background: #fff; transform: scale(1.35); }
-
-    /* Gallery: hint it's clickable */
-    #gallery { cursor: zoom-in; }
-    .gallery-btn { cursor: pointer; }
-
-    /* Expand icon badge */
-    #gallery-expand {
-      position: absolute; bottom: 14px; right: 16px; z-index: 3;
-      background: rgba(0,0,0,0.42); backdrop-filter: blur(4px);
-      border: 1px solid rgba(255,255,255,0.25); border-radius: 4px;
-      color: rgba(255,255,255,0.85); font-size: 13px;
-      padding: 5px 9px; pointer-events: none; letter-spacing: 0.04em;
-      display: flex; align-items: center; gap: 5px;
-    }
+    #gallery-expand:hover { background: rgba(0,0,0,0.68); border-color: rgba(255,255,255,0.55); }
 
     /* ── Lightbox ────────────────────────────────────────── */
     #lightbox {
@@ -371,7 +353,9 @@ const calYear = calMonths[0].year;
       color: var(--color-text); transition: background 0.12s, color 0.12s;
       user-select: none; -webkit-user-select: none;
     }
-    .cal-day:not(.cal-booked):not(.cal-past):hover { background: var(--color-hover); }
+    @media (hover: hover) {
+      .cal-day:not(.cal-booked):not(.cal-past):hover { background: var(--color-hover); }
+    }
 
     /* Booked: clearly unavailable — diagonal strike, distinct color */
     .cal-booked {
@@ -486,32 +470,19 @@ const calYear = calMonths[0].year;
 
   <!-- ── PHOTO GALLERY ──────────────────────────────────────────────────────── -->
   <div id="gallery">
-    {photos.map((src, i) => (
-      <img
-        src={src}
-        alt={`${name} — photo ${i + 1}`}
-        class={`gallery-img${i === 0 ? ' active' : ''}`}
-        loading={i === 0 ? 'eager' : 'lazy'}
-        draggable="false"
-      />
-    ))}
-    {photos.length > 1 && (
-      <>
-        <button id="gallery-prev" class="gallery-btn" aria-label="Previous photo">‹</button>
-        <button id="gallery-next" class="gallery-btn" aria-label="Next photo">›</button>
-        <div class="gallery-dots">
-          {photos.map((_, i) => (
-            <button class={`gallery-dot${i === 0 ? ' active' : ''}`} data-idx={i} aria-label={`Photo ${i + 1}`}></button>
-          ))}
-        </div>
-      </>
-    )}
-    <div id="gallery-expand" aria-hidden="true">
+    <img
+      id="gallery-hero"
+      src={bannerSrc}
+      alt={`${name} — banner`}
+      loading="eager"
+      draggable="false"
+    />
+    <button id="gallery-expand" aria-label={`View all ${photoCount} photos`}>
       <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">
         <path d="M1 5V1h4M9 1h4v4M13 9v4H9M5 13H1V9"/>
       </svg>
-      View full
-    </div>
+      View all {photoCount} photos
+    </button>
   </div>
 
   <!-- ── MAIN CONTENT ───────────────────────────────────────────────────────── -->
@@ -689,7 +660,7 @@ const calYear = calMonths[0].year;
   </div>
 
   <!-- ── Data injection for client JS ─────────────────────────────────────── -->
-  <script id="page-data" type="application/json" set:html={JSON.stringify({ bookedDates, rate, pets })}></script>
+  <script id="page-data" type="application/json" set:html={JSON.stringify({ bookedDates, rate, pets, photos })}></script>
 
   <script>
     // ── Load data ─────────────────────────────────────────────────────────────
@@ -700,43 +671,14 @@ const calYear = calMonths[0].year;
     const PET_FEE  = 50;
     let   petCount = 0;
 
-    // ── Photo gallery ─────────────────────────────────────────────────────────
-    const galleryImgs = document.querySelectorAll<HTMLElement>('.gallery-img');
-    const galleryDots = document.querySelectorAll<HTMLElement>('.gallery-dot');
-    let galCur = 0;
-
-    function showPhoto(n: number) {
-      galleryImgs[galCur].classList.remove('active');
-      galleryDots[galCur]?.classList.remove('active');
-      galCur = (n + galleryImgs.length) % galleryImgs.length;
-      galleryImgs[galCur].classList.add('active');
-      galleryDots[galCur]?.classList.add('active');
-    }
-
-    document.getElementById('gallery-prev')?.addEventListener('click', () => showPhoto(galCur - 1));
-    document.getElementById('gallery-next')?.addEventListener('click', () => showPhoto(galCur + 1));
-    galleryDots.forEach(d => d.addEventListener('click', () => showPhoto(+(d.dataset.idx ?? 0))));
-
-    // Touch swipe
+    // ── Photo gallery — static hero, lightbox for all photos ─────────────────
     const galleryEl = document.getElementById('gallery')!;
-    let gTouchX = 0;
-    galleryEl.addEventListener('touchstart', e => { gTouchX = e.touches[0].clientX; }, { passive: true });
-    galleryEl.addEventListener('touchend', e => {
-      const dx = e.changedTouches[0].clientX - gTouchX;
-      if (Math.abs(dx) > 40) showPhoto(galCur + (dx < 0 ? 1 : -1));
-    }, { passive: true });
-
-    // Auto-advance
-    let galTimer = setInterval(() => showPhoto(galCur + 1), 5000);
-    const resetTimer = () => { clearInterval(galTimer); galTimer = setInterval(() => showPhoto(galCur + 1), 5000); };
-    document.getElementById('gallery-prev')?.addEventListener('click', resetTimer);
-    document.getElementById('gallery-next')?.addEventListener('click', resetTimer);
 
     // ── Lightbox ──────────────────────────────────────────────────────────────
     const lightbox  = document.getElementById('lightbox')!;
     const lbImg     = document.getElementById('lb-img') as HTMLImageElement;
     const lbCounter = document.getElementById('lb-counter')!;
-    const allSrcs   = [...galleryImgs].map(el => (el as HTMLImageElement).src);
+    const allSrcs   = (_raw.photos as string[]);
     let lbCur = 0;
 
     function lbOpen(idx: number) {
@@ -746,12 +688,10 @@ const calYear = calMonths[0].year;
       lbCounter.textContent = `${lbCur + 1}  /  ${allSrcs.length}`;
       lightbox.classList.add('lb-open');
       document.body.style.overflow = 'hidden';
-      clearInterval(galTimer);
     }
     function lbClose() {
       lightbox.classList.remove('lb-open');
       document.body.style.overflow = '';
-      galTimer = setInterval(() => showPhoto(galCur + 1), 5000);
     }
     function lbShow(n: number) {
       lbCur = (n + allSrcs.length) % allSrcs.length;
@@ -763,11 +703,10 @@ const calYear = calMonths[0].year;
       lbCounter.textContent = `${lbCur + 1}  /  ${allSrcs.length}`;
     }
 
-    // Open lightbox when clicking gallery (not the nav buttons)
-    galleryEl.addEventListener('click', (e) => {
-      if (!(e.target as HTMLElement).closest('.gallery-btn, .gallery-dot')) {
-        lbOpen(galCur);
-      }
+    // Open lightbox on gallery click or "View all" button
+    galleryEl.addEventListener('click', () => lbOpen(0));
+    document.getElementById('gallery-expand')!.addEventListener('click', (e) => {
+      e.stopPropagation(); // already handled by galleryEl click, but be explicit
     });
 
     document.getElementById('lb-close')!.addEventListener('click', lbClose);
