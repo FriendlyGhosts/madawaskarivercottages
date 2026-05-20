@@ -271,17 +271,18 @@ const {
         lastScrollY = y;
       }, { passive: true });
 
-      // Night mode toggle
-      const modeToggle = document.getElementById('mode-toggle');
-      function updateToggleIcon() {
-        if (modeToggle) modeToggle.textContent = document.documentElement.classList.contains('night') ? '○' : '☽';
+      // Night mode toggle — bind all buttons with class .mode-toggle
+      const modeToggles = document.querySelectorAll('.mode-toggle');
+      function updateToggleIcons() {
+        const isNight = document.documentElement.classList.contains('night');
+        modeToggles.forEach(btn => btn.textContent = isNight ? '○' : '☽');
       }
-      updateToggleIcon();
-      modeToggle?.addEventListener('click', () => {
+      updateToggleIcons();
+      modeToggles.forEach(btn => btn.addEventListener('click', () => {
         const isNight = document.documentElement.classList.toggle('night');
         localStorage.setItem('night-mode', String(isNight));
-        updateToggleIcon();
-      });
+        updateToggleIcons();
+      }));
     </script>
   </body>
 </html>

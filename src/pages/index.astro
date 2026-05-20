@@ -179,7 +179,7 @@ const amenities = [
         <a href="#amenities" class="hover:text-[var(--color-text)] transition-colors duration-300">Amenities</a>
         <a href="#location" class="hover:text-[var(--color-text)] transition-colors duration-300">Location</a>
         <a href="#contact" class="hover:text-[var(--color-text)] transition-colors duration-300">Book</a>
-        <button id="mode-toggle" class="text-lg transition-all duration-300 hover:scale-110 hover:opacity-80" style="color: var(--color-accent); background: none; border: none; padding: 2px 6px;" data-hover aria-label="Toggle night mode">☽</button>
+        <button class="mode-toggle" class="text-lg transition-all duration-300 hover:scale-110 hover:opacity-80" style="color: var(--color-accent); background: none; border: none; padding: 2px 6px;" data-hover aria-label="Toggle night mode">☽</button>
       </div>
     </div>
     <!-- Mobile: title left, links right -->
@@ -187,10 +187,10 @@ const amenities = [
       <div class="text-base tracking-[0.08em] uppercase leading-tight" style="font-family: 'Cormorant', serif; font-weight: 400; color: var(--color-accent)">
         Madawaska<br/>River Cottages
       </div>
-      <div class="flex items-center gap-4 text-[10px] tracking-[0.14em] uppercase" style="color: var(--color-muted)">
-        <a href="#cottages" class="hover:text-[var(--color-text)] transition-colors duration-300">Cottages</a>
-        <a href="#contact" class="hover:text-[var(--color-text)] transition-colors duration-300">Book</a>
-        <button id="mode-toggle" class="text-base transition-all duration-300" style="color: var(--color-accent); background: none; border: none; padding: 2px 4px;" data-hover aria-label="Toggle night mode">☽</button>
+      <div class="flex items-center gap-5 text-[10px] tracking-[0.14em] uppercase" style="color: var(--color-muted)">
+        <a href="#cottages" class="py-2 transition-colors duration-300 hover:text-[var(--color-text)]">Cottages</a>
+        <a href="#contact" class="py-2 transition-colors duration-300 hover:text-[var(--color-text)]">Book</a>
+        <button class="mode-toggle text-base transition-all duration-300" style="color: var(--color-accent); background: none; border: none; padding: 8px 6px; margin: -8px -6px; touch-action: manipulation;" aria-label="Toggle night mode">☽</button>
       </div>
     </div>
   </nav>
@@ -218,12 +218,12 @@ const amenities = [
       <p class="reveal text-xs tracking-[0.35em] uppercase mb-8" style="color: var(--color-accent)">
         Griffith, Ontario · Madawaska River
       </p>
-      <h1 class="reveal reveal-delay-1 text-6xl md:text-8xl lg:text-9xl font-light leading-[0.9] mb-8" style="font-family: 'Cormorant', serif">
+      <h1 class="reveal reveal-delay-1 text-5xl md:text-8xl lg:text-9xl font-light leading-[0.9] mb-6 md:mb-8" style="font-family: 'Cormorant', serif">
         Where the<br/>
         <em class="not-italic" style="color: var(--color-accent)">river</em> calls<br/>
         you home
       </h1>
-      <p class="reveal reveal-delay-2 text-base md:text-lg max-w-lg mx-auto leading-relaxed mb-12" style="color: var(--color-muted)">
+      <p class="reveal reveal-delay-2 text-sm md:text-lg max-w-lg mx-auto leading-relaxed mb-8 md:mb-12" style="color: var(--color-muted)">
         Four private cottages set along the banks of the Madawaska River. Quiet mornings, open skies, and nothing between you and the water.
       </p>
       <div class="reveal reveal-delay-3 flex flex-col sm:flex-row gap-4 justify-center">
@@ -255,9 +255,9 @@ const amenities = [
   </section>
 
   <!-- COTTAGES -->
-  <section id="cottages" class="py-32 px-6">
+  <section id="cottages" class="py-16 md:py-32 px-6">
     <div class="max-w-6xl mx-auto">
-      <div class="text-center mb-20">
+      <div class="text-center mb-10 md:mb-20">
         <p class="reveal text-xs tracking-[0.3em] uppercase mb-4" style="color: var(--color-accent)">The Properties</p>
         <h2 class="reveal reveal-delay-1 text-5xl md:text-6xl font-light" style="font-family: 'Cormorant', serif">Four Cottages.<br/>One River.</h2>
         <div class="reveal reveal-delay-2 divider mt-6 mx-auto"></div>
@@ -290,7 +290,7 @@ const amenities = [
                 </div>
               )}
             </div>
-            <div class="p-8">
+            <div class="p-5 md:p-8">
               <div class="flex items-start justify-between mb-3">
                 <div>
                   <h3 class="text-2xl font-light" style="font-family: 'Cormorant', serif">{c.name}</h3>
@@ -334,7 +334,7 @@ const amenities = [
   </section>
 
   <!-- TREEHOUSE -->
-  <section id="treehouse" class="py-32 px-6" style="background: var(--color-surface)">
+  <section id="treehouse" class="py-16 md:py-32 px-6" style="background: var(--color-surface)">
     <div class="max-w-6xl mx-auto">
       <div class="grid md:grid-cols-2 gap-16 items-center">
         <div class="reveal order-2 md:order-1 grid grid-cols-2 gap-3">
@@ -396,9 +396,9 @@ const amenities = [
   </section>
 
   <!-- AMENITIES -->
-  <section id="amenities" class="py-32 px-6" style="background: var(--color-surface)">
+  <section id="amenities" class="py-16 md:py-32 px-6" style="background: var(--color-surface)">
     <div class="max-w-5xl mx-auto">
-      <div class="text-center mb-20">
+      <div class="text-center mb-10 md:mb-20">
         <p class="reveal text-xs tracking-[0.3em] uppercase mb-4" style="color: var(--color-accent)">What's Included</p>
         <h2 class="reveal reveal-delay-1 text-5xl md:text-6xl font-light" style="font-family: 'Cormorant', serif">Everything you need.<br/>Nothing you don't.</h2>
         <div class="reveal reveal-delay-2 divider mt-6 mx-auto"></div>
@@ -419,7 +419,7 @@ const amenities = [
   </section>
 
   <!-- LOCATION -->
-  <section id="location" class="py-32 px-6">
+  <section id="location" class="py-16 md:py-32 px-6">
     <div class="max-w-5xl mx-auto">
       <div class="grid md:grid-cols-2 gap-16 items-center">
         <div>
@@ -451,7 +451,7 @@ const amenities = [
   </section>
 
   <!-- CONTACT -->
-  <section id="contact" class="py-32 px-6" style="background: var(--color-surface)">
+  <section id="contact" class="py-16 md:py-32 px-6" style="background: var(--color-surface)">
     <div class="max-w-xl mx-auto text-center">
       <p class="reveal text-xs tracking-[0.3em] uppercase mb-4" style="color: var(--color-accent)">Reserve Your Stay</p>
       <h2 class="reveal reveal-delay-1 text-5xl md:text-6xl font-light mb-4" style="font-family: 'Cormorant', serif">Ready to escape?</h2>
@@ -463,7 +463,7 @@ const amenities = [
         50% deposit to confirm · $300 refundable damage deposit · Pet fee $50/pet · Rates exclude taxes
       </p>
       <form class="reveal reveal-delay-3 space-y-4 text-left" id="contact-form">
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="block text-xs tracking-[0.15em] uppercase mb-2" style="color: var(--color-muted)">First Name</label>
             <input type="text" class="w-full px-4 py-3 text-sm bg-transparent border outline-none focus:border-[var(--color-accent)] transition-colors duration-300" style="border-color: var(--color-border); color: var(--color-text)" />
