@@ -113,28 +113,20 @@ const {
           comps: [wc(6,640,2.1,3.20), wc(2.5,360,1.7,1.50), wc(1.4,190,1.3,0.30), wc(0.6,95,1.0,2.10)] },
       ];
 
-      // Per-layer bowstring state — snap springs back as damped oscillation, no point-source ripple
-      interface BowState {
-        engaged: boolean; releasing: boolean;
-        pullX: number; pullAmt: number;
-        releaseAmt: number; releaseT: number;
-        cooldown: number;
-      }
+      // Per-layer bowstring state — supports multiple concurrent pulses
+      interface Pulse { pullX: number; releaseAmt: number; releaseT: number; }
+      interface BowState { engaged: boolean; pullX: number; pullAmt: number; pulses: Pulse[]; }
       const bowStates: BowState[] = gLayers.map(() => ({
-        engaged: false, releasing: false,
-        pullX: 0, pullAmt: 0,
-        releaseAmt: 0, releaseT: 0,
-        cooldown: 0,
+        engaged: false, pullX: 0, pullAmt: 0, pulses: [],
       }));
       const isTouchDevice = navigator.maxTouchPoints > 0;
-      const ENGAGE_DIST = isTouchDevice ? 22 : 11;   // wider catch zone on touch
-      const SNAP_DIST   = isTouchDevice ? 28 : 62;   // snaps sooner on touch
-      const BOW_HW      = 140; // half-width of bowstring tent (px)
-      const COOLDOWN    = 0;   // no cooldown — every crossing triggers a ripple
+      const ENGAGE_DIST = isTouchDevice ? 22 : 11;
+      const SNAP_DIST   = isTouchDevice ? 28 : 62;
+      const BOW_HW      = 140;
 
-      const PULSE_SPEED = 2.2;  // px per frame — visible travel without feeling like a shockwave
-      const PULSE_DECAY = 0.0018; // slow fade — pulses travel a good distance before dying
-      const PULSE_HW0   = 110;   // initial half-width of each outgoing pulse (tighter than the pull)
+      const PULSE_SPEED = 2.2;
+      const PULSE_DECAY = 0.0018;
+      const PULSE_HW0   = 110;
 
       function compY(gl: GLayer, x: number, t: number): number {
         let y = 0;
@@ -149,29 +141,26 @@ const {
       }
 
       function bowDeform(st: BowState, x: number, t: number): number {
-        if (!st.engaged && !st.releasing) return 0;
+        let result = 0;
 
-        if (st.engaged) {
-          if (Math.abs(st.pullAmt) < 0.3) return 0;
+        // Current pull deformation
+        if (st.engaged && Math.abs(st.pullAmt) >= 0.3) {
           const dx = x - st.pullX;
-          if (Math.abs(dx) >= BOW_HW) return 0;
-          return st.pullAmt * bell(dx, BOW_HW);
+          if (Math.abs(dx) < BOW_HW) result += st.pullAmt * bell(dx, BOW_HW);
         }
 
-        // Releasing: two bell pulses travel outward
-        const age = t - st.releaseT;
-        const amp = st.releaseAmt * Math.exp(-age * PULSE_DECAY);
-        if (Math.abs(amp) < 0.3) return 0;
-
-        // Pulse widens as it disperses (water dispersion)
-        const hw = PULSE_HW0 + age * 1.4;
-        let result = 0;
-        for (const cx of [st.pullX - PULSE_SPEED * age, st.pullX + PULSE_SPEED * age]) {
-          const dx = x - cx;
-          if (Math.abs(dx) < hw) {
-            result += amp * 0.7 * bell(dx, hw);
+        // All active pulses — each travels independently
+        for (const p of st.pulses) {
+          const age = t - p.releaseT;
+          const amp = p.releaseAmt * Math.exp(-age * PULSE_DECAY);
+          if (Math.abs(amp) < 0.3) continue;
+          const hw = PULSE_HW0 + age * 1.4;
+          for (const cx of [p.pullX - PULSE_SPEED * age, p.pullX + PULSE_SPEED * age]) {
+            const dx = x - cx;
+            if (Math.abs(dx) < hw) result += amp * 0.7 * bell(dx, hw);
           }
         }
+
         return result;
       }
 
@@ -202,7 +191,6 @@ const {
 
       // Shared wave interaction — used by both mouse and touch
       function handleWaveInteraction(mx: number, my: number) {
-        bowStates.forEach(st => { if (st.cooldown > 0) st.cooldown--; });
         gLayers.forEach((gl, i) => {
           const st = bowStates[i];
           const surf = gl.baseRatio * wH + compY(gl, mx, wT);
@@ -210,13 +198,13 @@ const {
             st.pullX   = mx;
             st.pullAmt = my - surf;
             if (Math.abs(st.pullAmt) >= SNAP_DIST) {
-              st.releasing  = true;
-              st.releaseAmt = st.pullAmt;
-              st.releaseT   = wT;
-              st.engaged    = false;
+              // Push a new pulse into the pool — old ones keep travelling
+              st.pulses.push({ pullX: st.pullX, releaseAmt: st.pullAmt, releaseT: wT });
+              st.engaged = false;
+              st.pullAmt = 0;
             }
           } else if (Math.abs(my - surf) <= ENGAGE_DIST) {
-            st.engaged = true; st.releasing = false; st.pullX = mx; st.pullAmt = 0;
+            st.engaged = true; st.pullX = mx; st.pullAmt = 0;
           }
         });
       }
@@ -245,27 +233,23 @@ const {
       }, { passive: true });
 
       document.addEventListener('touchend', () => {
-        // Snap any engaged lines on finger lift
+        // Snap any engaged lines on finger lift — push into pool
         bowStates.forEach(st => {
           if (st.engaged) {
-            st.releasing = true;
-            st.releaseAmt = st.pullAmt;
-            st.releaseT = wT;
+            st.pulses.push({ pullX: st.pullX, releaseAmt: st.pullAmt, releaseT: wT });
             st.engaged = false;
+            st.pullAmt = 0;
           }
         });
       }, { passive: true });
 
       function animateWaves() {
-        // Check if traveling pulses have faded out
+        // Prune dead pulses from every layer's pool
         bowStates.forEach(st => {
-          if (st.releasing) {
-            const age = wT - st.releaseT;
-            const amp = st.releaseAmt * Math.exp(-age * PULSE_DECAY);
-            if (Math.abs(amp) < 0.3) {
-              st.releasing = false; st.pullAmt = 0; st.cooldown = COOLDOWN;
-            }
-          }
+          st.pulses = st.pulses.filter(p => {
+            const age = wT - p.releaseT;
+            return Math.abs(p.releaseAmt * Math.exp(-age * PULSE_DECAY)) >= 0.3;
+          });
         });
         wctx.clearRect(0, 0, wW, wH);
         wT += 1;
