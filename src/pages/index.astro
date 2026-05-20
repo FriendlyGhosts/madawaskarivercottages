@@ -199,7 +199,8 @@ const amenities = [
   <section class="relative min-h-screen flex flex-col items-center justify-center overflow-hidden" id="hero">
 
     <!-- Sun (day mode only) -->
-    <div id="sun" style="position:fixed;top: 12%; right: 14%; z-index: 1;">
+    <div id="sun" style="position:fixed;top: 12%; right: 14%; z-index: 1; overflow:visible;">
+      <canvas id="sun-rings-canvas" style="position:absolute;width:340px;height:340px;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;"></canvas>
       <div style="width:90px;height:90px;border-radius:50%;background:#f5c842;opacity:0.5;box-shadow:0 0 40px 16px rgba(245,200,66,0.22),0 0 80px 40px rgba(245,200,66,0.09);"></div>
     </div>
 
@@ -502,6 +503,158 @@ const amenities = [
       var el = document.querySelector('[data-date="' + ds + '"]');
       if (el) el.classList.add('cal-today');
     })();
+  </script>
+
+  <script is:inline>
+  (function() {
+    var srCanvas = document.getElementById('sun-rings-canvas');
+    var sunEl = document.getElementById('sun');
+    if (!srCanvas || !sunEl) return;
+    var srCtx = srCanvas.getContext('2d');
+
+    // Canvas logical size
+    var CS = 340;
+    var CS2 = CS / 2; // center
+
+    // Retina scaling
+    var dpr = window.devicePixelRatio || 1;
+    srCanvas.width  = Math.round(CS * dpr);
+    srCanvas.height = Math.round(CS * dpr);
+    srCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    // 3 rings: base radius, angular wave components [[A, n, phi], ...]
+    var rings = [
+      { R: 68,  comps: [[3.5, 2, 0.0], [1.8, 3, 1.2], [1.0, 5, 0.6]] },
+      { R: 104, comps: [[4.5, 2, 0.9], [2.2, 3, 2.1], [1.3, 4, 1.8]] },
+      { R: 146, comps: [[5.5, 2, 1.7], [2.8, 3, 0.4], [1.6, 5, 2.9]] },
+    ];
+
+    // Per-ring bowstring state in angular domain
+    var bowStates = rings.map(function() {
+      return { engaged: false, theta: 0, pullAmt: 0, pulses: [] };
+    });
+
+    var SR_ENGAGE_DIST = 13;  // px from ring surface
+    var SR_SNAP_DIST   = 42;  // px — snap threshold
+    var SR_BOW_HW      = 0.65; // radians half-width of deformation
+    var SR_PULSE_SPEED = 0.022; // radians/frame
+    var SR_PULSE_DECAY = 0.0022;
+    var SR_PULSE_HW0   = 0.55;  // radians initial half-width
+    var NSR = 260; // segments per ring
+    var srT = 0;
+
+    // Angular difference normalized to [-π, π]
+    function angDiff(a, b) {
+      var d = ((a - b) % (2 * Math.PI) + 3 * Math.PI) % (2 * Math.PI) - Math.PI;
+      return d;
+    }
+
+    // Squared cosine bell in angular domain
+    function angBell(dTheta, hw) {
+      if (Math.abs(dTheta) >= hw) return 0;
+      var b = 0.5 * (1 + Math.cos(Math.PI * dTheta / hw));
+      return b * b;
+    }
+
+    function ringWaveR(ring, theta, t) {
+      var r = ring.R;
+      for (var j = 0; j < ring.comps.length; j++) {
+        var c = ring.comps[j];
+        r += c[0] * Math.cos(c[1] * theta + 0.014 * c[1] * t + c[2]);
+      }
+      return r;
+    }
+
+    function bowDeformR(bow, theta, t) {
+      var result = 0;
+      if (bow.engaged && Math.abs(bow.pullAmt) >= 0.4) {
+        var dθ = angDiff(theta, bow.theta);
+        result += bow.pullAmt * angBell(dθ, SR_BOW_HW);
+      }
+      for (var p = 0; p < bow.pulses.length; p++) {
+        var pulse = bow.pulses[p];
+        var age = t - pulse.releaseT;
+        var amp = pulse.releaseAmt * Math.exp(-age * SR_PULSE_DECAY);
+        if (Math.abs(amp) < 0.25) continue;
+        var hw = SR_PULSE_HW0 + age * 0.007;
+        var centers = [pulse.theta - SR_PULSE_SPEED * age, pulse.theta + SR_PULSE_SPEED * age];
+        for (var ci = 0; ci < 2; ci++) {
+          var dθ2 = angDiff(theta, centers[ci]);
+          if (Math.abs(dθ2) < hw) result += amp * 0.65 * angBell(dθ2, hw);
+        }
+      }
+      return result;
+    }
+
+    function drawSunRings() {
+      var isNight = document.documentElement.classList.contains('night');
+      srCtx.clearRect(0, 0, CS, CS);
+      if (isNight) return;
+
+      // Prune dead pulses
+      bowStates.forEach(function(bow) {
+        bow.pulses = bow.pulses.filter(function(p) {
+          var age = srT - p.releaseT;
+          return Math.abs(p.releaseAmt * Math.exp(-age * SR_PULSE_DECAY)) >= 0.25;
+        });
+      });
+
+      var alphas   = [0.38, 0.26, 0.17];
+      var widths   = [1.6,  1.2,  0.9];
+
+      rings.forEach(function(ring, ri) {
+        var bow = bowStates[ri];
+        srCtx.beginPath();
+        var first = true;
+        for (var i = 0; i <= NSR; i++) {
+          var theta = (i / NSR) * 2 * Math.PI;
+          var r = ringWaveR(ring, theta, srT) + bowDeformR(bow, theta, srT);
+          var x = CS2 + r * Math.cos(theta);
+          var y = CS2 + r * Math.sin(theta);
+          if (first) { srCtx.moveTo(x, y); first = false; }
+          else srCtx.lineTo(x, y);
+        }
+        srCtx.closePath();
+        srCtx.strokeStyle = 'rgba(245,200,66,' + alphas[ri] + ')';
+        srCtx.lineWidth   = widths[ri];
+        srCtx.stroke();
+      });
+
+      srT++;
+      requestAnimationFrame(drawSunRings);
+    }
+
+    // Mouse → angular interaction
+    document.addEventListener('mousemove', function(e) {
+      var rect = sunEl.getBoundingClientRect();
+      var cx = rect.left + rect.width  / 2;
+      var cy = rect.top  + rect.height / 2;
+      var dx = e.clientX - cx;
+      var dy = e.clientY - cy;
+      var dist = Math.sqrt(dx * dx + dy * dy);
+      var theta = Math.atan2(dy, dx);
+
+      rings.forEach(function(ring, ri) {
+        var bow = bowStates[ri];
+        var distFromRing = Math.abs(dist - ring.R);
+        if (bow.engaged) {
+          bow.theta   = theta;
+          bow.pullAmt = dist - ring.R;
+          if (Math.abs(bow.pullAmt) >= SR_SNAP_DIST) {
+            bow.pulses.push({ theta: bow.theta, releaseAmt: bow.pullAmt, releaseT: srT });
+            bow.engaged = false;
+            bow.pullAmt = 0;
+          }
+        } else if (distFromRing <= SR_ENGAGE_DIST) {
+          bow.engaged = true;
+          bow.theta   = theta;
+          bow.pullAmt = 0;
+        }
+      });
+    });
+
+    drawSunRings();
+  })();
   </script>
 
   <!-- CONTACT -->
