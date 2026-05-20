@@ -34,9 +34,10 @@ html.night #sun  { display: none; }
 #moon { display: none; }
 html.night #moon { display: block; }
 
-/* Moon and cursor rings hidden on mobile */
+/* Moon, sun/moon rings, and cursor rings hidden on mobile */
 @media (max-width: 767px) {
   html.night #moon { display: none; }
+  #sun-rings-wrap { display: none !important; }
   #cursor-dot, #cursor-ring { display: none !important; }
 }
 
