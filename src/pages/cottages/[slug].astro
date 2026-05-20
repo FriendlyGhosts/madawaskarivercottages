@@ -386,7 +386,15 @@ const calYear = calMonths[0].year;
     }
     html.night .cal-booked { background: rgba(255,255,255,0.05); }
 
-    .cal-past   { color: var(--color-muted); opacity: 0.25; cursor: default; }
+    /* past overrides booked — uniform fade for all historical dates */
+    .cal-past {
+      color: var(--color-muted) !important;
+      opacity: 0.25 !important;
+      cursor: default !important;
+      background: none !important;
+      text-decoration: none !important;
+      border-radius: 50% !important;
+    }
     .cal-today  { font-weight: 500; outline: 1px solid var(--color-accent); outline-offset: -2px; }
 
     /* Selection */

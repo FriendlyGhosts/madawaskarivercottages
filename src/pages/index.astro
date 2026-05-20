@@ -911,6 +911,11 @@ const amenities = [
   }
   .cal-day.cal-past {
     color: var(--color-border);
+    /* past overrides booked — no strikethrough or blocked bg in the past */
+    background: none !important;
+    text-decoration: none !important;
+    opacity: 0.45 !important;
+    cursor: default !important;
   }
   .cal-day.cal-booked {
     background: var(--color-border);

@@ -34,9 +34,10 @@ html.night #sun  { display: none; }
 #moon { display: none; }
 html.night #moon { display: block; }
 
-/* Moon hidden on mobile — causes text legibility issues in night mode */
+/* Moon and cursor rings hidden on mobile */
 @media (max-width: 767px) {
   html.night #moon { display: none; }
+  #cursor-dot, #cursor-ring { display: none !important; }
 }
 
 @media (pointer: fine) {
