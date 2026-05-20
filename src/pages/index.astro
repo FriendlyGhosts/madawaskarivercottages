@@ -175,8 +175,8 @@ const amenities = [
       </div>
       <div class="flex items-center gap-8 text-xs tracking-[0.18em] uppercase" style="color: var(--color-muted)">
         <a href="#cottages" class="hover:text-[var(--color-text)] transition-colors duration-300">Cottages</a>
-        <a href="#treehouse" class="hover:text-[var(--color-text)] transition-colors duration-300">Treehouse</a>
         <a href="#amenities" class="hover:text-[var(--color-text)] transition-colors duration-300">Amenities</a>
+        <a href="#treehouse" class="hover:text-[var(--color-text)] transition-colors duration-300">Treehouse</a>
         <a href="#location" class="hover:text-[var(--color-text)] transition-colors duration-300">Location</a>
         <a href="#contact" class="hover:text-[var(--color-text)] transition-colors duration-300">Book</a>
         <button class="mode-toggle" class="text-lg transition-all duration-300 hover:scale-110 hover:opacity-80" style="color: var(--color-accent); background: none; border: none; padding: 2px 6px;" data-hover aria-label="Toggle night mode">☽</button>
@@ -338,6 +338,29 @@ const amenities = [
     </div>
   </section>
 
+  <!-- AMENITIES (cottages) — appears before treehouse so context is clear -->
+  <section id="amenities" class="py-16 md:py-32 px-6" style="background: var(--color-surface)">
+    <div class="max-w-5xl mx-auto">
+      <div class="text-center mb-10 md:mb-20">
+        <p class="reveal text-xs tracking-[0.3em] uppercase mb-4" style="color: var(--color-accent)">Included With Every Cottage</p>
+        <h2 class="reveal reveal-delay-1 text-5xl md:text-6xl font-light" style="font-family: 'Cormorant', serif">Everything you need.<br/>Nothing you don't.</h2>
+        <div class="reveal reveal-delay-2 divider mt-6 mx-auto"></div>
+      </div>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-px" style="background: var(--color-border)">
+        {amenities.map((a, i) => (
+          <div
+            class={`reveal reveal-delay-${(i % 4) + 1} flex flex-col items-center justify-center py-10 px-6 text-center transition-colors duration-300 hover:bg-[var(--color-green)]`}
+            style="background: var(--color-surface)"
+            data-hover
+          >
+            <span class="mb-4" style="color: var(--color-accent)" set:html={a.svg}></span>
+            <span class="text-xs tracking-[0.15em] uppercase leading-relaxed" style="color: var(--color-muted)">{a.label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
   <!-- TREEHOUSE -->
   <section id="treehouse" class="py-16 md:py-32 px-6" style="background: var(--color-surface)">
     <div class="max-w-6xl mx-auto">
@@ -354,7 +377,15 @@ const amenities = [
           <h2 class="reveal reveal-delay-1 text-5xl font-light mb-2" style="font-family: 'Cormorant', serif">{treehouse.name}</h2>
           <p class="reveal reveal-delay-1 text-xs tracking-[0.15em] uppercase mb-6" style="color: var(--color-accent)">{treehouse.tagline}</p>
           <div class="reveal reveal-delay-2 divider mb-8"></div>
-          <p class="reveal reveal-delay-2 text-sm leading-relaxed mb-8" style="color: var(--color-muted)">{treehouse.description}</p>
+          <p class="reveal reveal-delay-2 text-sm leading-relaxed mb-6" style="color: var(--color-muted)">{treehouse.description}</p>
+          <div class="reveal reveal-delay-2 grid grid-cols-2 gap-x-6 gap-y-2 text-xs mb-8" style="color: var(--color-muted)">
+            <div class="flex gap-2"><span style="color:var(--color-accent)">—</span> Firepit & BBQ</div>
+            <div class="flex gap-2"><span style="color:var(--color-accent)">—</span> Wood stove</div>
+            <div class="flex gap-2"><span style="color:var(--color-accent)">—</span> Equipped kitchen</div>
+            <div class="flex gap-2"><span style="color:var(--color-accent)">—</span> Private deck</div>
+            <div class="flex gap-2"><span style="color:var(--color-accent)">—</span> Deep forest seclusion</div>
+            <div class="flex gap-2"><span style="color:var(--color-accent)">—</span> Trails on your doorstep</div>
+          </div>
           <div class="reveal reveal-delay-3 flex gap-8 text-xs mb-10" style="color: var(--color-muted)">
             <div><span style="color: var(--color-accent)">Sleeps</span><br/>{treehouse.sleeps}</div>
             <div><span style="color: var(--color-accent)">Beds</span><br/>{treehouse.bedDetail}</div>
@@ -396,29 +427,6 @@ const amenities = [
             </div>
           </div>
         </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- AMENITIES -->
-  <section id="amenities" class="py-16 md:py-32 px-6" style="background: var(--color-surface)">
-    <div class="max-w-5xl mx-auto">
-      <div class="text-center mb-10 md:mb-20">
-        <p class="reveal text-xs tracking-[0.3em] uppercase mb-4" style="color: var(--color-accent)">What's Included</p>
-        <h2 class="reveal reveal-delay-1 text-5xl md:text-6xl font-light" style="font-family: 'Cormorant', serif">Everything you need.<br/>Nothing you don't.</h2>
-        <div class="reveal reveal-delay-2 divider mt-6 mx-auto"></div>
-      </div>
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-px" style="background: var(--color-border)">
-        {amenities.map((a, i) => (
-          <div
-            class={`reveal reveal-delay-${(i % 4) + 1} flex flex-col items-center justify-center py-10 px-6 text-center transition-colors duration-300 hover:bg-[var(--color-green)]`}
-            style="background: var(--color-surface)"
-            data-hover
-          >
-            <span class="mb-4" style="color: var(--color-accent)" set:html={a.svg}></span>
-            <span class="text-xs tracking-[0.15em] uppercase leading-relaxed" style="color: var(--color-muted)">{a.label}</span>
-          </div>
-        ))}
       </div>
     </div>
   </section>
@@ -493,7 +501,6 @@ const amenities = [
         { q: "Had a wonderful stay at this rustic and beautiful spot. The star gazing was top notch!! The water was perfect — paddling out on our SUP to jump into the current was refreshing and fun. The proximity to amazing hikes was appreciated.", n: "Sarah · Toronto" },
         { q: "Thoroughly enjoyed the place and the quiet surroundings…very impressed with the cleanliness and the details in the little things to make your stay great! Come ready to relax and unwind!", n: "Janice · Welland" },
         { q: "River flows right on the property and the surroundings are serene. When we arrived, the grass was tall and Luka arrived within an hour and cut it so we could enjoy the evening outside. An outstanding host.", n: "Aniruddha · Toronto" },
-        { q: "Gorgeous property and everything we needed for a relaxing weekend away!!", n: "Emilie · Ottawa" },
         { q: "Amazing stay yet again! We absolutely love this Airbnb. The location, the cleanliness, the value, the hospitality. Wonderful experience and perfect place to make memories. A definite must stay!", n: "Brittany · Windsor" },
         { q: "Lovely spot to chill out. The cottage is rustic but comfortable. The kitchen is well stocked. Great value. Very quiet — no sound of highway traffic. Bring your s'more kit!", n: "Kyla · Ottawa" },
         { q: "Very beautiful area, lots of space around the cottage giving good privacy and room for our dogs to play. The cottage itself was well stocked, comfy and cute.", n: "Zosia · St. Catharines" },
@@ -505,7 +512,6 @@ const amenities = [
         { q: "Excellent location for canoeing the rapids on the Lower Madawaska. We did the section from below Slate Falls to the cottage three times. Next time we visit we'll run the full section from Aumonds Bay. We plan to return.", n: "Geoff · Knowlton" },
         { q: "Luka was a great host! Responsive and helpful! The place is so clean, has beautiful scenery and is private. We'll definitely recommend it to others and hope to come back again!", n: "Pat · Markham" },
         { q: "Spent the weekend and wished we could have spent a week. The cabin is amazing and the wood stove makes the experience. 100% recommend and family friendly.", n: "Jeanna · Bath" },
-        { q: "Enjoyed our stay, very peaceful with nature and quiet to rest and relax.", n: "Mike · Toronto" },
         { q: "A wonderful place to relax and recharge! Luka and Tori are friendly, responsive hosts. The cabin was everything we had hoped for.", n: "Angela" },
         { q: "The cottage was cozy and clean, the view of the river was beautiful. The pictures were accurate, Luka was flexible and friendly, and we enjoyed our stay.", n: "Beau" },
         { q: "My family and I had a great time — we will definitely be booking another stay. The location was very quiet and peaceful, we loved the fire pit and the little dock was great for fishing.", n: "Mylaine" },
@@ -514,22 +520,14 @@ const amenities = [
         { q: "Staying at Luka's cottage was a fantastic getaway. He even brought over firewood and a canoe for us to use. The cottage has private access to the river and everything was very clean. Highly recommended!", n: "Ron · Toronto" },
         { q: "We absolutely loved this peaceful little retreat! We even saw a moose regularly across the river! Luka was very easy to communicate with and responded to anything we required.", n: "Madisen · Belleville" },
         { q: "The view across the river was beautiful. We saw a moose grazing for over 2 hours one morning. Luka is a great host — I'd recommend this place to anyone wanting to get away and be surrounded by nature.", n: "Justin · Burlington" },
-        { q: "What a great cottage! Had such a relaxing time! My dogs absolutely loved it! A peaceful location in nature.", n: "Skyler · Montréal" },
-        { q: "Luka was an extremely responsive host — providing canoe/kayaks upon request. The cabin provided a perfect getaway. Very clean and comfortable, and the location is wonderfully peaceful and beautiful.", n: "Lisa · Durango" },
         { q: "Words can't describe how beautiful the cottage and property were. Luka was quick to respond to any questions we had. Everything listed was there and in excellent working order. Will be back for sure!", n: "Jason · Hamilton" },
         { q: "Calm, peaceful getaway tucked away in the midst of nature! Wonderful location, ample privacy and great amenities. Luka was a great host, very responsive and made sure we had a great stay!", n: "Shamanth · Bengaluru" },
         { q: "Such an amazing place and host! The view was scenic, the place was super clean, and Luka responded to queries with near lightning speed. Thank you so much!", n: "Chippy" },
         { q: "Five stars all around. The cottage was perfect, the view just as. Luka and his family went above and beyond — during a power outage they set us up in another cottage with a wood stove already roaring. I can't wait to come back.", n: "Carolyn · Ottawa" },
         { q: "The house is very nice and well equipped, the environment is superb, especially in autumn. Luka and his father are attentive hosts and communication was very easy.", n: "Audrey · Kingston" },
-        { q: "We had an amazing retreat — all we wanted was to check out from the city and see the stars by a firepit and we got that and more.", n: "Atsushi · Toronto" },
-        { q: "The cottage had everything we needed and more, even DVDs for rainy days! We even saw a moose across the river. Luka was very easy to communicate with. We definitely recommend and hope to return again.", n: "Madisen · Belleville" },
-        { q: "Had a wonderful short stay. The cottage was as described, the property along the river is beautiful. I would love to return.", n: "Ruth · Canada" },
-        { q: "Beautiful clean cottage, host was a great communicator.", n: "Mike · Toronto" },
-        { q: "My favourite part was morning coffee on the deck listening to nature. Very private and peaceful. Luka was friendly and helpful! It was a wonderful week.", n: "Allison" },
         { q: "We had a great time at Luka's cottage on Madawaska River. It is absolutely beautiful and we couldn't have asked for anything better! Looking forward to visiting again!", n: "Ayslin · Ottawa" },
         { q: "This place was absolutely perfect for our family — clean and had everything we were looking for! Went with our 2 and 4 year old and they loved spending so much time on the water!", n: "Jazzmin" },
         { q: "The cabin provided a perfect getaway. Very clean and comfortable, and the location is wonderfully peaceful and beautiful. Had a great time watching the blue jays swooping across the property in the morning.", n: "Lisa · Durango" },
-        { q: "Great wonderful cottage on a nice private road and river. Luka was quick to respond to any questions we had. Everything listed was there and in excellent working order. Would recommend to anyone.", n: "Jason · Hamilton" },
         { q: "Very cozy and beautiful place to relax and enjoy nature by the quiet river.", n: "Majid" },
         { q: "Our family had an absolutely wonderful vacation here. Very private with gorgeous scenery and wildlife. We were in a heat wave and were very grateful to have an AC unit available. We will definitely return.", n: "April" },
         { q: "This cottage is cute as a button. It was clean and looked just as expected. Luka was friendly and helpful and quick to respond to messages.", n: "Janet" },
@@ -605,8 +603,9 @@ const amenities = [
     });
 
     var SR_ENGAGE_DIST = 13;  // px from ring surface
-    var SR_SNAP_DIST   = 42;  // px — snap threshold
-    var SR_BOW_HW      = 0.65; // radians half-width of deformation
+    var SR_SNAP_DIST   = 50;  // px — snap threshold (higher = harder to trigger)
+    var SR_BOW_HW      = 0.50; // radians half-width of deformation (tighter)
+    var SR_PULL_SCALE  = 0.28; // dampen visual deformation
     var SR_PULSE_SPEED = 0.022; // radians/frame
     var SR_PULSE_DECAY = 0.0022;
     var SR_PULSE_HW0   = 0.55;  // radians initial half-width
@@ -639,7 +638,7 @@ const amenities = [
       var result = 0;
       if (bow.engaged && Math.abs(bow.pullAmt) >= 0.4) {
         var dθ = angDiff(theta, bow.theta);
-        result += bow.pullAmt * angBell(dθ, SR_BOW_HW);
+        result += bow.pullAmt * SR_PULL_SCALE * angBell(dθ, SR_BOW_HW);
       }
       for (var p = 0; p < bow.pulses.length; p++) {
         var pulse = bow.pulses[p];
@@ -714,7 +713,7 @@ const amenities = [
           bow.theta   = theta;
           bow.pullAmt = dist - ring.R;
           if (Math.abs(bow.pullAmt) >= SR_SNAP_DIST) {
-            bow.pulses.push({ theta: bow.theta, releaseAmt: bow.pullAmt, releaseT: srT });
+            bow.pulses.push({ theta: bow.theta, releaseAmt: bow.pullAmt * SR_PULL_SCALE, releaseT: srT });
             bow.engaged = false;
             bow.pullAmt = 0;
           }
