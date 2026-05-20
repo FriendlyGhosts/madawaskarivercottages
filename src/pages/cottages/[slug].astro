@@ -1,0 +1,816 @@
+---
+import Layout from '../../layouts/Layout.astro';
+
+// ─── Shared types ─────────────────────────────────────────────────────────────
+type CalCell = { day: number; ds: string; booked: boolean; past: boolean } | null;
+
+// ─── iCal helpers (defined here for use in component scope) ──────────────────
+function parseIcalBookedDates(icsText: string): string[] {
+  const dates = new Set<string>();
+  const lines = icsText.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+  let inEvent = false, dtstart = '', dtend = '';
+  for (const line of lines) {
+    const t = line.trim();
+    if (t === 'BEGIN:VEVENT') { inEvent = true; dtstart = ''; dtend = ''; }
+    else if (t === 'END:VEVENT') {
+      inEvent = false;
+      if (dtstart && dtend) {
+        let d = new Date(+dtstart.slice(0,4), +dtstart.slice(4,6)-1, +dtstart.slice(6,8));
+        const end = new Date(+dtend.slice(0,4), +dtend.slice(4,6)-1, +dtend.slice(6,8));
+        while (d < end) {
+          dates.add(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
+          d.setDate(d.getDate() + 1);
+        }
+      }
+    } else if (inEvent) {
+      const ms = line.match(/^DTSTART(?:;[^:]+)?:(\d{8})/);
+      const me = line.match(/^DTEND(?:;[^:]+)?:(\d{8})/);
+      if (ms) dtstart = ms[1];
+      if (me) dtend = me[1];
+    }
+  }
+  return [...dates].sort();
+}
+
+async function fetchBookedDates(icalUrl: string | null): Promise<string[]> {
+  if (!icalUrl) return [];
+  try {
+    const res = await fetch(icalUrl, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+    if (!res.ok) return [];
+    return parseIcalBookedDates(await res.text());
+  } catch { return []; }
+}
+
+// ─── Summer calendar builder (May–October) ───────────────────────────────────
+const CAL_MONTH_NAMES = ['January','February','March','April','May','June',
+                         'July','August','September','October','November','December'];
+const DAY_LABELS = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+
+function buildSummerCalendar(bookedDates: string[]) {
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+  const booked = new Set(bookedDates);
+  const year = now.getMonth() >= 10 ? now.getFullYear() + 1 : now.getFullYear();
+
+  return [4, 5, 6, 7, 8, 9].map(month => {
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const firstDow    = new Date(year, month, 1).getDay();
+    const cells: CalCell[] = [
+      ...Array.from<null>({ length: firstDow }, () => null),
+      ...Array.from({ length: daysInMonth }, (_, i) => {
+        const day = i + 1;
+        const ds  = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+        return { day, ds, booked: booked.has(ds), past: ds < todayStr };
+      }),
+    ];
+    while (cells.length % 7 !== 0) cells.push(null);
+    return { year, month, name: CAL_MONTH_NAMES[month], cells };
+  });
+}
+
+// ─── getStaticPaths ───────────────────────────────────────────────────────────
+export async function getStaticPaths() {
+  // All helper functions are duplicated here so getStaticPaths is self-contained
+  function _parseIcal(icsText: string): string[] {
+    const dates = new Set<string>();
+    const lines = icsText.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+    let inEvent = false, dtstart = '', dtend = '';
+    for (const line of lines) {
+      const t = line.trim();
+      if (t === 'BEGIN:VEVENT') { inEvent = true; dtstart = ''; dtend = ''; }
+      else if (t === 'END:VEVENT') {
+        inEvent = false;
+        if (dtstart && dtend) {
+          let d = new Date(+dtstart.slice(0,4), +dtstart.slice(4,6)-1, +dtstart.slice(6,8));
+          const end = new Date(+dtend.slice(0,4), +dtend.slice(4,6)-1, +dtend.slice(6,8));
+          while (d < end) {
+            dates.add(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
+            d.setDate(d.getDate() + 1);
+          }
+        }
+      } else if (inEvent) {
+        const ms = line.match(/^DTSTART(?:;[^:]+)?:(\d{8})/);
+        const me = line.match(/^DTEND(?:;[^:]+)?:(\d{8})/);
+        if (ms) dtstart = ms[1];
+        if (me) dtend = me[1];
+      }
+    }
+    return [...dates].sort();
+  }
+
+  async function _fetch(icalUrl: string | null): Promise<string[]> {
+    if (!icalUrl) return [];
+    try {
+      const res = await fetch(icalUrl, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+      if (!res.ok) return [];
+      return _parseIcal(await res.text());
+    } catch { return []; }
+  }
+
+  const PROPERTIES = [
+    {
+      slug: 'whitetail-lodge',
+      number: '117',
+      name: 'Whitetail Lodge',
+      tagline: 'Intimate riverside escape',
+      sleeps: 4,
+      bedDetail: '1 double + 1 queen · 2 bed · 1 bath',
+      pets: true,
+      photoFolder: 'tucked-away',
+      photoCount: 5,
+      airbnbId: '679589509313140703',
+      icalUrl: 'https://www.airbnb.ca/calendar/ical/679589509313140703.ics?t=2406443036c346718124201677870044',
+      description: 'A private two-bedroom cabin set right on the Madawaska. Hike the Uplands Trail, boulder at Calabogie, kayak the rapids, or spend a lazy afternoon paddleboarding. End your day at the fire pit under the stars.',
+      longDescription: 'Step off the deck and onto the river. Whitetail Lodge offers direct access to the Madawaska — a canoe and kayak are waiting for you. The two-bedroom layout is intimate and well-appointed, with a fully equipped kitchen and a wood fire to take the chill off cool evenings. The surrounding land is yours: 2 private acres with mature trees, a dock for morning coffee, and total quiet.',
+      rate: 185,
+      isTreehouse: false,
+      features: ['Private riverfront dock', 'Canoe & kayak included', 'Firepit & BBQ', 'Fully equipped kitchen', 'Deck with patio', 'Life jackets provided', '2 acres of privacy', 'Pet friendly'],
+    },
+    {
+      slug: 'owls-nest',
+      number: '143',
+      name: "Owl's Nest",
+      tagline: 'The riverside classic',
+      sleeps: 4,
+      bedDetail: '2 bedrooms · 2 beds · 1 bath',
+      pets: false,
+      photoFolder: 'cozy-riverfront',
+      photoCount: 5,
+      airbnbId: '895861420839792739',
+      icalUrl: 'https://www.airbnb.ca/calendar/ical/895861420839792739.ics?t=0410eea1e1f54d79b84c49a1a4c43c1a',
+      description: 'Nestled on 2 secluded acres right on the river. Thousands of acres of wild, rolling landscape and hidden lakes wait to be discovered — and a smoldering fire will be waiting for your return.',
+      longDescription: "Owl's Nest sits on a gentle rise above the Madawaska, catching the morning light and the evening mist. Two bedrooms, a cozy living space, and a kitchen stocked for proper cooking. The dock is your base of operations — launch the canoe, cast a line, or just watch the river go by. The surrounding forest keeps the neighbours at a distance.",
+      rate: 195,
+      isTreehouse: false,
+      features: ['Private riverfront dock', 'Canoe & kayak included', 'Firepit & BBQ', 'Fully equipped kitchen', 'Deck with patio', 'Life jackets provided', '2 acres of privacy'],
+    },
+    {
+      slug: 'cedarwood-cabin',
+      number: '157',
+      name: 'Cedarwood Cabin',
+      tagline: 'Warmth and seclusion',
+      sleeps: 4,
+      bedDetail: '2 bedrooms · 1 bath',
+      pets: false,
+      photoFolder: 'magical-wintertime',
+      photoCount: 5,
+      airbnbId: '1037163450739528690',
+      icalUrl: 'https://www.airbnb.ca/calendar/ical/1037163450739528690.ics?t=a7116dfe254144de9345e479c481dddd',
+      description: 'Tucked away in the forest, right on the Madawaska. Private river access for paddleboarding, kayaking, and canoeing. Early risers catch the morning mist from the dock with a cup of tea.',
+      longDescription: 'Cedarwood Cabin earns its name — warm wood tones, forest on three sides, and the river right at the bottom of the property. Wake up to birdsong, walk down to the dock, and spend your mornings on the water before the world stirs. Two bedrooms sleep four in comfort, and the kitchen is set up for real meals after long days outside.',
+      rate: 185,
+      isTreehouse: false,
+      features: ['Private riverfront dock', 'Canoe & kayak included', 'Firepit & BBQ', 'Fully equipped kitchen', 'Deck with patio', 'Life jackets provided', '2 acres of privacy'],
+    },
+    {
+      slug: 'lazy-bear-lodge',
+      number: '165',
+      name: 'Lazy Bear Lodge',
+      tagline: 'The group retreat',
+      sleeps: 6,
+      bedDetail: '1 queen, 1 double + pull-out sofa · 1 bath',
+      pets: true,
+      photoFolder: 'madawaska-lodge',
+      photoCount: 5,
+      airbnbId: null,
+      icalUrl: null,
+      description: 'Spacious and comfortable with room for the whole crew. A full kitchen, large living area, fire pit, and private dock on the Madawaska River.',
+      longDescription: "When the whole group decides to get away, Lazy Bear Lodge is built for it. Sleeping six across a queen, a double, and a pull-out sofa, there's space to spread out without stepping on each other. The large living area is the natural gathering point — morning coffee, card games at midnight, everything in between. Outside: a fire pit, a dock, canoes, and the Madawaska rolling past. Pets welcome.",
+      rate: 235,
+      isTreehouse: false,
+      features: ['Private riverfront dock', 'Canoe & kayak included', 'Firepit & BBQ', 'Fully equipped kitchen', 'Deck with patio', 'Life jackets provided', '2 acres of privacy', 'Pet friendly', 'Sauna'],
+    },
+    {
+      slug: 'treehouse',
+      number: null,
+      name: 'The Treehouse',
+      tagline: 'Lost in the canopy',
+      sleeps: 2,
+      bedDetail: '1 bedroom · 1 bath',
+      pets: false,
+      photoFolder: 'cabin-heaven',
+      photoCount: 4,
+      airbnbId: '1042917519190055212',
+      icalUrl: 'https://www.airbnb.ca/calendar/ical/1042917519190055212.ics?t=2c3e8664ed5f40e987f75f61a727f200',
+      description: "Tucked into the forest, 650 m from the road along a rustic trail — this one isn't on the river. It's something different. No neighbours, no noise, just trees and sky.",
+      longDescription: "Follow the trail 650 metres into the forest and leave the road behind entirely. The Treehouse is a different kind of escape — no river, no neighbours, just a canopy of trees and profound quiet. A wood stove keeps things warm as temperatures drop. The deck catches the light through the leaves. This is for the two of you who want to disappear completely.",
+      rate: 155,
+      isTreehouse: true,
+      features: ['Firepit & BBQ', 'Wood stove', 'Fully equipped kitchen', 'Private deck', 'Deep forest seclusion', 'Trails on your doorstep'],
+    },
+  ];
+
+  const paths = await Promise.all(
+    PROPERTIES.map(async (p) => {
+      const bookedDates = await _fetch(p.icalUrl);
+      return { params: { slug: p.slug }, props: { ...p, bookedDates } };
+    })
+  );
+  return paths;
+}
+
+// ─── Component props ──────────────────────────────────────────────────────────
+interface Props {
+  slug: string;
+  number: string | null;
+  name: string;
+  tagline: string;
+  sleeps: number;
+  bedDetail: string;
+  pets: boolean;
+  photoFolder: string;
+  photoCount: number;
+  airbnbId: string | null;
+  rate: number;
+  description: string;
+  longDescription: string;
+  isTreehouse: boolean;
+  features: string[];
+  bookedDates: string[];
+}
+
+const {
+  name, tagline, sleeps, bedDetail, pets,
+  photoFolder, photoCount, airbnbId, rate,
+  longDescription, isTreehouse, features, bookedDates,
+} = Astro.props;
+
+const number = Astro.props.number;
+const photos = Array.from({ length: photoCount }, (_, i) => `/images/cottages/${photoFolder}-${i + 1}.jpg`);
+const calMonths = buildSummerCalendar(bookedDates);
+const calYear = calMonths[0].year;
+---
+
+<Layout title={`${name} · Madawaska River Cottages`} description={Astro.props.description}>
+
+  <style>
+    /* ── Nav ─────────────────────────────────────────────── */
+    nav { transition: transform 0.35s ease; }
+    nav.nav-hidden { transform: translateY(-100%); }
+
+    /* ── Gallery ─────────────────────────────────────────── */
+    #gallery {
+      position: relative; width: 100%;
+      height: 62vh; min-height: 320px; max-height: 680px;
+      background: var(--color-surface); overflow: hidden;
+    }
+    .gallery-img {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%; object-fit: cover;
+      opacity: 0; transition: opacity 0.6s ease;
+    }
+    .gallery-img.active { opacity: 1; }
+    .gallery-btn {
+      position: absolute; top: 50%; transform: translateY(-50%);
+      width: 44px; height: 44px; border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.4);
+      background: rgba(0,0,0,0.28); backdrop-filter: blur(4px);
+      color: #fff; font-size: 22px; line-height: 1;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; z-index: 2;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .gallery-btn:hover { background: rgba(0,0,0,0.55); border-color: rgba(255,255,255,0.7); }
+    #gallery-prev { left: 16px; }
+    #gallery-next { right: 16px; }
+    .gallery-dots {
+      position: absolute; bottom: 14px; left: 50%;
+      transform: translateX(-50%); display: flex; gap: 6px; z-index: 2;
+    }
+    .gallery-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: rgba(255,255,255,0.45); border: none; padding: 0;
+      cursor: pointer; transition: background 0.3s, transform 0.2s;
+    }
+    .gallery-dot.active { background: #fff; transform: scale(1.35); }
+
+    /* ── Calendar grid ───────────────────────────────────── */
+    .cal-grid-full { display: grid; grid-template-columns: repeat(2, 1fr); gap: 36px 56px; }
+    @media (max-width: 767px) { .cal-grid-full { grid-template-columns: 1fr; } }
+    .cal-month-name { font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--color-accent); margin-bottom: 10px; }
+    .cal-days-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+    .cal-dow { font-size: 9px; letter-spacing: 0.08em; text-align: center; padding: 4px 0 6px; color: var(--color-muted); text-transform: uppercase; }
+    .cal-day {
+      aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+      font-size: 11px; border-radius: 50%; cursor: pointer;
+      color: var(--color-text); transition: background 0.12s, color 0.12s;
+      user-select: none; -webkit-user-select: none;
+    }
+    .cal-day:not(.cal-booked):not(.cal-past):hover { background: var(--color-hover); }
+    .cal-booked { color: var(--color-muted); text-decoration: line-through; cursor: default; opacity: 0.5; }
+    .cal-past   { color: var(--color-muted); opacity: 0.28; cursor: default; }
+    .cal-today  { font-weight: 500; outline: 1px solid var(--color-accent); outline-offset: -2px; }
+
+    /* Selection */
+    .cal-day.sel-start,
+    .cal-day.sel-end {
+      background: var(--color-accent) !important;
+      color: var(--color-bg) !important;
+      border-radius: 50% !important;
+    }
+    .cal-day.sel-range {
+      background: rgba(46,107,138,0.16);
+      border-radius: 0;
+      color: var(--color-text);
+    }
+    html.night .cal-day.sel-range { background: rgba(82,184,160,0.16); }
+    .cal-day.sel-start:not(.sel-end) { border-radius: 50% 0 0 50% !important; }
+    .cal-day.sel-end:not(.sel-start)  { border-radius: 0 50% 50% 0 !important; }
+
+    /* Legend */
+    .cal-legend { display: flex; gap: 18px; flex-wrap: wrap; }
+    .cal-legend-item { display: flex; align-items: center; gap: 6px; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-muted); }
+    .cal-legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+    /* ── Calculator ──────────────────────────────────────── */
+    #calc-panel {
+      border: 1px solid var(--color-border);
+      background: var(--color-surface);
+      padding: 24px 28px 20px;
+      margin-bottom: 40px;
+    }
+    .calc-row {
+      display: flex; justify-content: space-between; align-items: baseline;
+      padding: 7px 0; border-bottom: 1px solid var(--color-border);
+    }
+    .calc-row:last-child { border-bottom: none; }
+    .calc-label { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-muted); }
+    .calc-value { font-size: 13px; color: var(--color-text); }
+    #calc-total-row .calc-value { font-size: 20px; font-family: 'Cormorant', serif; color: var(--color-accent); }
+
+    /* ── Misc ────────────────────────────────────────────── */
+    .divider { width: 48px; height: 1px; background: var(--color-accent); }
+    .feature-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--color-accent); flex-shrink: 0; margin-top: 7px; }
+  </style>
+
+  <!-- ── NAV ────────────────────────────────────────────────────────────────── -->
+  <nav class="fixed top-0 left-0 right-0 z-50 px-5 py-3 md:py-4">
+    <div class="flex items-center justify-between max-w-6xl mx-auto">
+      <a
+        href="/#cottages"
+        class="flex items-center gap-2 text-xs tracking-[0.15em] uppercase transition-colors duration-300 hover:text-[var(--color-text)]"
+        style="color: var(--color-muted)"
+        data-hover
+      >
+        <span style="font-size: 18px; line-height:1; margin-top:-1px;">←</span>
+        <span class="hidden sm:inline">All Cottages</span>
+      </a>
+      <a
+        href="/"
+        class="text-base md:text-lg tracking-[0.1em] uppercase"
+        style="font-family: 'Cormorant', serif; font-weight: 400; color: var(--color-accent)"
+        data-hover
+      >
+        Madawaska River Cottages
+      </a>
+      <button
+        class="mode-toggle text-base"
+        style="color: var(--color-accent); background: none; border: none; padding: 8px 6px; touch-action: manipulation; cursor: pointer;"
+        aria-label="Toggle night mode"
+        data-hover
+      >☽</button>
+    </div>
+  </nav>
+
+  <!-- ── PHOTO GALLERY ──────────────────────────────────────────────────────── -->
+  <div id="gallery">
+    {photos.map((src, i) => (
+      <img
+        src={src}
+        alt={`${name} — photo ${i + 1}`}
+        class={`gallery-img${i === 0 ? ' active' : ''}`}
+        loading={i === 0 ? 'eager' : 'lazy'}
+        draggable="false"
+      />
+    ))}
+    {photos.length > 1 && (
+      <>
+        <button id="gallery-prev" class="gallery-btn" aria-label="Previous photo">‹</button>
+        <button id="gallery-next" class="gallery-btn" aria-label="Next photo">›</button>
+        <div class="gallery-dots">
+          {photos.map((_, i) => (
+            <button class={`gallery-dot${i === 0 ? ' active' : ''}`} data-idx={i} aria-label={`Photo ${i + 1}`}></button>
+          ))}
+        </div>
+      </>
+    )}
+  </div>
+
+  <!-- ── MAIN CONTENT ───────────────────────────────────────────────────────── -->
+  <main class="max-w-5xl mx-auto px-6 py-14 md:py-24">
+
+    <!-- Header -->
+    <div class="mb-14 md:mb-18">
+      <p class="text-xs tracking-[0.3em] uppercase mb-3" style="color: var(--color-accent)">
+        {isTreehouse ? 'Something Different · Griffith, Ontario' : `${number} Harrison Trail · Griffith, Ontario`}
+      </p>
+      <h1 class="text-5xl md:text-7xl font-light mb-3" style="font-family: 'Cormorant', serif">{name}</h1>
+      <p class="text-xs tracking-[0.22em] uppercase mb-8" style="color: var(--color-accent)">{tagline}</p>
+      <div class="divider mb-8"></div>
+      <div class="flex flex-wrap gap-x-10 gap-y-3 text-sm mb-8" style="color: var(--color-muted)">
+        <span><span style="color:var(--color-accent)">Sleeps&ensp;</span>{sleeps}</span>
+        <span><span style="color:var(--color-accent)">Beds&ensp;</span>{bedDetail}</span>
+        <span><span style="color:var(--color-accent)">Pets&ensp;</span>{pets ? 'Welcome' : 'Not accepted'}</span>
+        <span><span style="color:var(--color-accent)">Access&ensp;</span>{isTreehouse ? '650 m forest trail' : 'Direct road access'}</span>
+      </div>
+      <p class="text-base leading-loose max-w-2xl" style="color: var(--color-muted)">{longDescription}</p>
+    </div>
+
+    <!-- Features -->
+    <div class="mb-16">
+      <p class="text-xs tracking-[0.25em] uppercase mb-6" style="color: var(--color-accent)">What's included</p>
+      <div class="grid grid-cols-2 md:grid-cols-3 gap-y-3 gap-x-8">
+        {features.map(f => (
+          <div class="flex items-start gap-3">
+            <div class="feature-dot"></div>
+            <span class="text-sm leading-relaxed" style="color: var(--color-muted)">{f}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    <!-- ── AVAILABILITY + PRICE CALCULATOR ─────────────────────────────────── -->
+    <div class="mb-20">
+      <div class="divider mb-10"></div>
+      <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-8">
+        <div>
+          <p class="text-xs tracking-[0.3em] uppercase mb-2" style="color: var(--color-accent)">Availability</p>
+          <h2 class="text-3xl md:text-4xl font-light" style="font-family: 'Cormorant', serif">Summer {calYear}</h2>
+        </div>
+        <p class="text-xs" style="color: var(--color-muted); letter-spacing: 0.08em;">
+          Click or drag to select your dates
+        </p>
+      </div>
+
+      <!-- Calculator panel -->
+      <div id="calc-panel">
+        <div class="flex items-center justify-between mb-5">
+          <div class="text-2xl font-light" style="font-family:'Cormorant',serif; color:var(--color-text)">
+            From&ensp;<span style="color:var(--color-accent)">${rate}</span>
+            <span class="text-sm" style="font-family:'Inter',sans-serif; color:var(--color-muted)"> / night</span>
+          </div>
+          <button id="calc-clear" style="display:none; font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:var(--color-muted); background:none; border:none; cursor:pointer; text-decoration:underline; text-underline-offset:3px;">
+            Clear
+          </button>
+        </div>
+
+        <p id="calc-prompt" class="text-xs" style="color:var(--color-muted); letter-spacing:0.08em;">
+          Select a check-in date on the calendar below
+        </p>
+
+        <div id="calc-result" style="display:none;">
+          <div class="calc-row">
+            <span class="calc-label">Check-in</span>
+            <span class="calc-value" id="calc-checkin">—</span>
+          </div>
+          <div class="calc-row">
+            <span class="calc-label">Check-out</span>
+            <span class="calc-value" id="calc-checkout">—</span>
+          </div>
+          <div class="calc-row" id="calc-nights-row" style="display:none;">
+            <span class="calc-label">Duration</span>
+            <span class="calc-value" id="calc-nights">—</span>
+          </div>
+          <div class="calc-row" id="calc-total-row" style="display:none;">
+            <span class="calc-label" style="font-weight:500">Estimated total</span>
+            <span class="calc-value" id="calc-total">—</span>
+          </div>
+          <p id="calc-footnote" style="display:none; font-size:10px; color:var(--color-muted); margin-top:10px; letter-spacing:0.06em;">
+            Minimum 1-week stay · Rates exclude taxes · 50% deposit to confirm
+          </p>
+        </div>
+      </div>
+
+      <!-- 6-month calendar -->
+      <div class="cal-grid-full" id="cal-grid">
+        {calMonths.map(mon => (
+          <div class="cal-month">
+            <div class="cal-month-name">{mon.name} {mon.year}</div>
+            <div class="cal-days-grid">
+              {DAY_LABELS.map(d => <div class="cal-dow">{d}</div>)}
+              {mon.cells.map(cell => cell === null
+                ? <div></div>
+                : <div
+                    class={`cal-day${cell.booked ? ' cal-booked' : ''}${cell.past ? ' cal-past' : ''}`}
+                    data-date={cell.ds}
+                    data-booked={cell.booked ? '1' : '0'}
+                    data-past={cell.past ? '1' : '0'}
+                  >{cell.day}</div>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div class="cal-legend mt-8">
+        <span class="cal-legend-item">
+          <span class="cal-legend-dot" style="background:var(--color-accent)"></span>Available
+        </span>
+        <span class="cal-legend-item">
+          <span class="cal-legend-dot" style="background:var(--color-muted);opacity:0.5"></span>Booked
+        </span>
+        <span class="cal-legend-item">
+          <span class="cal-legend-dot" style="background:var(--color-accent);opacity:0.6"></span>Selected
+        </span>
+      </div>
+    </div>
+
+    <!-- ── BOOK CTA ─────────────────────────────────────────────────────────── -->
+    <div class="text-center pt-10" style="border-top: 1px solid var(--color-border)">
+      <p class="text-xs tracking-[0.3em] uppercase mb-8" style="color: var(--color-accent)">Ready to book?</p>
+      {airbnbId ? (
+        <a
+          href={`https://www.airbnb.ca/rooms/${airbnbId}`}
+          target="_blank"
+          rel="noopener"
+          class="inline-block px-12 py-5 text-xs tracking-[0.28em] uppercase transition-all duration-300 hover:opacity-90"
+          style="background: var(--color-accent); color: var(--color-bg)"
+          data-hover
+        >
+          Book on Airbnb
+        </a>
+      ) : (
+        <a
+          href="/#contact"
+          class="inline-block px-12 py-5 text-xs tracking-[0.28em] uppercase transition-all duration-300 hover:opacity-90"
+          style="background: var(--color-accent); color: var(--color-bg)"
+          data-hover
+        >
+          Enquire to Book
+        </a>
+      )}
+      <p class="text-xs mt-6" style="color: var(--color-muted)">
+        1-week minimum · Check-in 3 pm · Check-out 11 am · $300 refundable damage deposit
+      </p>
+    </div>
+
+  </main>
+
+  <!-- ── Data injection for client JS ─────────────────────────────────────── -->
+  <script id="page-data" type="application/json" set:html={JSON.stringify({ bookedDates, rate })}></script>
+
+  <script>
+    // ── Load data ─────────────────────────────────────────────────────────────
+    const _raw   = JSON.parse(document.getElementById('page-data')!.textContent!);
+    const BOOKED: Set<string> = new Set(_raw.bookedDates);
+    const RATE: number = _raw.rate;
+
+    // ── Photo gallery ─────────────────────────────────────────────────────────
+    const galleryImgs = document.querySelectorAll<HTMLElement>('.gallery-img');
+    const galleryDots = document.querySelectorAll<HTMLElement>('.gallery-dot');
+    let galCur = 0;
+
+    function showPhoto(n: number) {
+      galleryImgs[galCur].classList.remove('active');
+      galleryDots[galCur]?.classList.remove('active');
+      galCur = (n + galleryImgs.length) % galleryImgs.length;
+      galleryImgs[galCur].classList.add('active');
+      galleryDots[galCur]?.classList.add('active');
+    }
+
+    document.getElementById('gallery-prev')?.addEventListener('click', () => showPhoto(galCur - 1));
+    document.getElementById('gallery-next')?.addEventListener('click', () => showPhoto(galCur + 1));
+    galleryDots.forEach(d => d.addEventListener('click', () => showPhoto(+(d.dataset.idx ?? 0))));
+
+    // Touch swipe
+    const galleryEl = document.getElementById('gallery')!;
+    let gTouchX = 0;
+    galleryEl.addEventListener('touchstart', e => { gTouchX = e.touches[0].clientX; }, { passive: true });
+    galleryEl.addEventListener('touchend', e => {
+      const dx = e.changedTouches[0].clientX - gTouchX;
+      if (Math.abs(dx) > 40) showPhoto(galCur + (dx < 0 ? 1 : -1));
+    }, { passive: true });
+
+    // Auto-advance
+    let galTimer = setInterval(() => showPhoto(galCur + 1), 5000);
+    const resetTimer = () => { clearInterval(galTimer); galTimer = setInterval(() => showPhoto(galCur + 1), 5000); };
+    document.getElementById('gallery-prev')?.addEventListener('click', resetTimer);
+    document.getElementById('gallery-next')?.addEventListener('click', resetTimer);
+
+    // ── Date selection helpers ────────────────────────────────────────────────
+    const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+    function fmtDate(ds: string) {
+      const [y, m, d] = ds.split('-');
+      return `${MONTHS_SHORT[+m - 1]} ${+d}, ${y}`;
+    }
+
+    function nightsBetween(a: string, b: string): number {
+      return Math.round(Math.abs(new Date(b+'T12:00:00').getTime() - new Date(a+'T12:00:00').getTime()) / 86400000);
+    }
+
+    // Inclusive range of date strings
+    function dateRange(a: string, b: string): string[] {
+      const s = a <= b ? a : b;
+      const e = a <= b ? b : a;
+      const out: string[] = [];
+      const d = new Date(s + 'T12:00:00');
+      const end = new Date(e + 'T12:00:00');
+      while (d <= end) {
+        out.push(d.toISOString().slice(0, 10));
+        d.setDate(d.getDate() + 1);
+      }
+      return out;
+    }
+
+    // True if any date strictly between a and b (exclusive endpoints) is booked
+    function hasBlockedInside(a: string, b: string): boolean {
+      const range = dateRange(a, b);
+      return range.slice(1, -1).some(ds => BOOKED.has(ds));
+    }
+
+    // ── Selection state ───────────────────────────────────────────────────────
+    let selStart: string | null = null;
+    let selEnd:   string | null = null;
+    let dragging = false;
+
+    function clearHighlights() {
+      document.querySelectorAll('.cal-day.sel-start, .cal-day.sel-end, .cal-day.sel-range')
+        .forEach(el => el.classList.remove('sel-start', 'sel-end', 'sel-range'));
+    }
+
+    function paintHighlights(start: string | null, end: string | null) {
+      clearHighlights();
+      if (!start) return;
+      if (!end || start === end) {
+        document.querySelector(`[data-date="${start}"]`)?.classList.add('sel-start', 'sel-end');
+        return;
+      }
+      const s = start <= end ? start : end;
+      const e = start <= end ? end : start;
+      document.querySelector(`[data-date="${s}"]`)?.classList.add('sel-start');
+      document.querySelector(`[data-date="${e}"]`)?.classList.add('sel-end');
+      dateRange(s, e).slice(1, -1).forEach(ds =>
+        document.querySelector(`[data-date="${ds}"]`)?.classList.add('sel-range')
+      );
+    }
+
+    function updateCalc(start: string | null, end: string | null) {
+      const promptEl   = document.getElementById('calc-prompt')!;
+      const resultEl   = document.getElementById('calc-result')!;
+      const clearBtn   = document.getElementById('calc-clear')!;
+      const checkinEl  = document.getElementById('calc-checkin')!;
+      const checkoutEl = document.getElementById('calc-checkout')!;
+      const nightsRow  = document.getElementById('calc-nights-row')!;
+      const nightsEl   = document.getElementById('calc-nights')!;
+      const totalRow   = document.getElementById('calc-total-row')!;
+      const totalEl    = document.getElementById('calc-total')!;
+      const footnoteEl = document.getElementById('calc-footnote')!;
+
+      if (!start) {
+        promptEl.style.display = '';
+        resultEl.style.display = 'none';
+        clearBtn.style.display = 'none';
+        return;
+      }
+
+      promptEl.style.display = 'none';
+      resultEl.style.display = 'block';
+      clearBtn.style.display = '';
+
+      const s = (start <= (end ?? start)) ? start : (end ?? start);
+      const e = end ? (start <= end ? end : start) : null;
+
+      checkinEl.textContent  = fmtDate(s);
+      checkoutEl.textContent = e ? fmtDate(e) : '— select check-out';
+
+      if (e && s !== e) {
+        const nights = nightsBetween(s, e);
+        nightsEl.textContent = `${nights} night${nights !== 1 ? 's' : ''}`;
+        totalEl.textContent  = `$${(nights * RATE).toLocaleString()}`;
+        nightsRow.style.display  = '';
+        totalRow.style.display   = '';
+        footnoteEl.style.display = '';
+      } else {
+        nightsRow.style.display  = 'none';
+        totalRow.style.display   = 'none';
+        footnoteEl.style.display = 'none';
+      }
+    }
+
+    function setSelection(start: string | null, end: string | null) {
+      selStart = start;
+      selEnd   = end;
+      paintHighlights(start, end);
+      updateCalc(start, end);
+    }
+
+    // ── Wire up calendar days ─────────────────────────────────────────────────
+    const calDays = Array.from(document.querySelectorAll<HTMLElement>('.cal-day'));
+
+    calDays.forEach(el => {
+      const ds      = el.dataset.date!;
+      const blocked = el.dataset.booked === '1' || el.dataset.past === '1';
+
+      el.addEventListener('mousedown', ev => {
+        if (blocked) return;
+        ev.preventDefault();
+        dragging = true;
+
+        if (!selStart) {
+          // First click — set check-in
+          setSelection(ds, null);
+        } else if (selEnd) {
+          // Already have a range — restart
+          setSelection(ds, null);
+        } else {
+          // Have check-in, setting check-out
+          if (ds === selStart) { setSelection(null, null); }
+          else if (hasBlockedInside(selStart, ds)) {
+            // Can't cross booked dates — restart from here
+            setSelection(ds, null);
+          } else {
+            const s = selStart <= ds ? selStart : ds;
+            const e = selStart <= ds ? ds : selStart;
+            setSelection(s, e);
+            dragging = false;
+          }
+        }
+      });
+
+      el.addEventListener('mouseenter', () => {
+        if (!dragging || !selStart || selEnd) return;
+        if (blocked) return;
+        if (hasBlockedInside(selStart, ds)) return;
+        paintHighlights(selStart, ds);
+        updateCalc(selStart, ds);
+      });
+    });
+
+    // Commit drag on mouseup
+    document.addEventListener('mouseup', () => {
+      if (!dragging) return;
+      dragging = false;
+      if (selStart) {
+        // Find the highlighted end
+        const endEl = document.querySelector<HTMLElement>('.cal-day.sel-end:not(.sel-start)');
+        if (endEl?.dataset.date && endEl.dataset.date !== selStart) {
+          selEnd = endEl.dataset.date;
+          updateCalc(selStart, selEnd);
+        }
+      }
+    });
+
+    // ── Touch calendar ────────────────────────────────────────────────────────
+    const calGrid = document.getElementById('cal-grid')!;
+
+    function dayElAtPoint(x: number, y: number): HTMLElement | null {
+      const el = document.elementFromPoint(x, y) as HTMLElement | null;
+      return el?.classList.contains('cal-day') ? el : null;
+    }
+
+    calGrid.addEventListener('touchstart', ev => {
+      const t   = ev.touches[0];
+      const day = dayElAtPoint(t.clientX, t.clientY);
+      if (!day || day.dataset.booked === '1' || day.dataset.past === '1') return;
+      dragging = true;
+      const ds = day.dataset.date!;
+      if (!selStart) {
+        setSelection(ds, null);
+      } else if (selEnd) {
+        setSelection(ds, null);
+      } else {
+        if (ds === selStart) { setSelection(null, null); }
+        else if (!hasBlockedInside(selStart, ds)) {
+          const s = selStart <= ds ? selStart : ds;
+          const e = selStart <= ds ? ds : selStart;
+          setSelection(s, e);
+          dragging = false;
+        } else {
+          setSelection(ds, null);
+        }
+      }
+    }, { passive: true });
+
+    calGrid.addEventListener('touchmove', ev => {
+      if (!dragging || !selStart || selEnd) return;
+      const t   = ev.touches[0];
+      const day = dayElAtPoint(t.clientX, t.clientY);
+      if (!day || day.dataset.booked === '1' || day.dataset.past === '1') return;
+      const ds = day.dataset.date!;
+      if (hasBlockedInside(selStart, ds)) return;
+      paintHighlights(selStart, ds);
+      updateCalc(selStart, ds);
+    }, { passive: true });
+
+    calGrid.addEventListener('touchend', () => {
+      if (dragging && selStart) {
+        const endEl = document.querySelector<HTMLElement>('.cal-day.sel-end:not(.sel-start)');
+        if (endEl?.dataset.date && endEl.dataset.date !== selStart) {
+          selEnd = endEl.dataset.date;
+          updateCalc(selStart, selEnd);
+        }
+      }
+      dragging = false;
+    }, { passive: true });
+
+    // Clear button
+    document.getElementById('calc-clear')!.addEventListener('click', () => setSelection(null, null));
+
+    // ── Today highlight ───────────────────────────────────────────────────────
+    const now = new Date();
+    const todayDs = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+    document.querySelector(`[data-date="${todayDs}"]`)?.classList.add('cal-today');
+  </script>
+
+</Layout>

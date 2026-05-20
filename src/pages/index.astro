@@ -81,6 +81,7 @@ function buildCalendar(bookedDates: string[], numMonths = 2) {
 const cottageDefs = [
   {
     number: '117',
+    slug: 'whitetail-lodge',
     name: 'Whitetail Lodge',
     tagline: 'Intimate riverside escape',
     sleeps: 4,
@@ -93,6 +94,7 @@ const cottageDefs = [
   },
   {
     number: '143',
+    slug: 'owls-nest',
     name: "Owl's Nest",
     tagline: 'The riverside classic',
     sleeps: 4,
@@ -105,6 +107,7 @@ const cottageDefs = [
   },
   {
     number: '157',
+    slug: 'cedarwood-cabin',
     name: 'Cedarwood Cabin',
     tagline: 'Warmth and seclusion',
     sleeps: 4,
@@ -117,12 +120,13 @@ const cottageDefs = [
   },
   {
     number: '165',
+    slug: 'lazy-bear-lodge',
     name: 'Lazy Bear Lodge',
     tagline: 'The group retreat',
     sleeps: 6,
     bedDetail: '1 queen, 1 double + pull-out sofa',
     pets: true,
-    photo: null,
+    photo: '/images/cottages/madawaska-lodge-1.jpg',
     airbnbId: null,
     icalUrl: null,
     description: 'Spacious and comfortable with room for the whole crew. A full kitchen, large living area, fire pit, and private dock on the Madawaska River.',
@@ -309,6 +313,17 @@ const amenities = [
               </div>
               <p class="text-sm leading-relaxed mt-4" style="color: var(--color-muted)">{c.description}</p>
 
+              <div class="mt-5">
+                <a
+                  href={`/cottages/${c.slug}`}
+                  class="text-xs tracking-[0.2em] uppercase border-b transition-colors duration-300 hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]"
+                  style="border-color: var(--color-border); color: var(--color-muted); padding-bottom: 2px;"
+                  data-hover
+                >
+                  View Details &amp; Gallery →
+                </a>
+              </div>
+
               {/* Availability calendar */}
               <div class="cal-wrap mt-6 pt-6" style="border-top: 1px solid var(--color-border)">
                 <p class="text-xs tracking-[0.18em] uppercase mb-4" style="color: var(--color-accent)">Availability</p>
@@ -390,6 +405,16 @@ const amenities = [
             <div><span style="color: var(--color-accent)">Sleeps</span><br/>{treehouse.sleeps}</div>
             <div><span style="color: var(--color-accent)">Beds</span><br/>{treehouse.bedDetail}</div>
             <div><span style="color: var(--color-accent)">Pets</span><br/>No</div>
+          </div>
+          <div class="reveal reveal-delay-3 mb-5">
+            <a
+              href="/cottages/treehouse"
+              class="text-xs tracking-[0.2em] uppercase border-b transition-colors duration-300 hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]"
+              style="border-color: var(--color-border); color: var(--color-muted); padding-bottom: 2px;"
+              data-hover
+            >
+              View Details &amp; Gallery →
+            </a>
           </div>
           <div class="reveal reveal-delay-3">
             <a
