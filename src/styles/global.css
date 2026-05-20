@@ -16,17 +16,17 @@
 }
 
 html.night {
-  --color-bg: #181410;
-  --color-surface: #211c14;
-  --color-border: #3e3318;
-  --color-text: #e5dcc8;
-  --color-muted: #9a8860;
-  --color-accent: #5a9e7a;
-  --color-accent-dim: #3d7a5a;
-  --color-hover: #2e2616;
-  --gradient-card: linear-gradient(135deg, #1c2818, #121b10);
-  --gradient-map: linear-gradient(135deg, #1c2818, #121b10);
-  --color-watermark: rgba(90, 158, 122, 0.07);
+  --color-bg: #0d1117;
+  --color-surface: #141c26;
+  --color-border: #243040;
+  --color-text: #d8e4ec;
+  --color-muted: #6a8898;
+  --color-accent: #6aaed4;
+  --color-accent-dim: #4a90b8;
+  --color-hover: #1a2838;
+  --gradient-card: linear-gradient(135deg, #141e2e, #0d1520);
+  --gradient-map: linear-gradient(135deg, #141e2e, #0d1520);
+  --color-watermark: rgba(106, 174, 212, 0.06);
 }
 
 #moon { display: none; }
@@ -93,10 +93,10 @@ body.cursor-hover #cursor-ring {
 }
 
 html.night #cursor-ring {
-  border-color: rgba(90, 158, 122, 0.5);
+  border-color: rgba(106, 174, 212, 0.5);
 }
 html.night body.cursor-hover #cursor-ring {
-  border-color: rgba(90, 158, 122, 0.9);
+  border-color: rgba(106, 174, 212, 0.9);
 }
 
 .reveal {
