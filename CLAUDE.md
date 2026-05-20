@@ -78,8 +78,15 @@ Photos can be swapped in index.astro by changing the `photo:` field.
 - Mobile: title stacked left ("Madawaska / River Cottages"), Cottages + Book + toggle on right
 - Nav hides on scroll down, reappears on scroll up
 
+## Drone photos (added 2026-05-20)
+Fresh aerial drone shots for all four riverside cottages, organized by address:
+- `drone-117-1..15.jpg` → Whitetail Lodge (117 Harrison Trail)
+- `drone-143-1..13.jpg` → Owl's Nest (143 Harrison Trail)
+- `drone-157-1..10.jpg` → Cedarwood Cabin (157 Harrison Trail)
+- `drone-165-1..11.jpg` → Lazy Bear Lodge (165 Harrison Trail)
+- Raw river aerials: `Pictures/Drone/05-20-2026/Madawaska River/` (not yet on site)
+
 ## Pending / known TODOs
-- [ ] 165 Lazy Bear Lodge has no photo — needs real photo added to public/images/cottages/
 - [ ] Confirm which Airbnb listing maps to which cottage address (117/143/157/165)
 - [ ] Contact form is UI only — not wired to any backend/email service yet
 - [ ] May want individual cottage detail pages (/cottages/whitetail-lodge etc.)
