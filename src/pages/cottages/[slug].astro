@@ -117,8 +117,8 @@ export async function getStaticPaths() {
       bedDetail: '1 double + 1 queen · 2 bed · 1 bath',
       pets: true,
       photoFolder: 'drone-117',
-      photoCount: 15,
-      heroPhoto: 14,
+      photoCount: 11,
+      heroPhoto: 10,
       airbnbId: '679589509313140703',
       icalUrl: 'https://www.airbnb.ca/calendar/ical/679589509313140703.ics?t=2406443036c346718124201677870044',
       description: 'A private two-bedroom cabin set right on the Madawaska. Hike the Uplands Trail, boulder at Calabogie, kayak the rapids, or spend a lazy afternoon paddleboarding. End your day at the fire pit under the stars.',
@@ -136,8 +136,8 @@ export async function getStaticPaths() {
       bedDetail: '2 bedrooms · 2 beds · 1 bath',
       pets: false,
       photoFolder: 'drone-143',
-      photoCount: 13,
-      heroPhoto: 13,
+      photoCount: 5,
+      heroPhoto: 4,
       airbnbId: '895861420839792739',
       icalUrl: 'https://www.airbnb.ca/calendar/ical/895861420839792739.ics?t=0410eea1e1f54d79b84c49a1a4c43c1a',
       description: 'Nestled on 2 secluded acres right on the river. Thousands of acres of wild, rolling landscape and hidden lakes wait to be discovered — and a smoldering fire will be waiting for your return.',
@@ -155,8 +155,8 @@ export async function getStaticPaths() {
       bedDetail: '2 bedrooms · 1 bath',
       pets: false,
       photoFolder: 'drone-157',
-      photoCount: 10,
-      heroPhoto: 10,
+      photoCount: 7,
+      heroPhoto: 2,
       airbnbId: '1037163450739528690',
       icalUrl: 'https://www.airbnb.ca/calendar/ical/1037163450739528690.ics?t=a7116dfe254144de9345e479c481dddd',
       description: 'Tucked away in the forest, right on the Madawaska. Private river access for paddleboarding, kayaking, and canoeing. Early risers catch the morning mist from the dock with a cup of tea.',
@@ -174,7 +174,7 @@ export async function getStaticPaths() {
       bedDetail: '1 queen, 1 double + pull-out sofa · 1 bath',
       pets: true,
       photoFolder: 'drone-165',
-      photoCount: 11,
+      photoCount: 10,
       heroPhoto: 3,
       airbnbId: null,
       icalUrl: null,
@@ -705,9 +705,7 @@ const calYear = calMonths[0].year;
 
     // Open lightbox on gallery click or "View all" button
     galleryEl.addEventListener('click', () => lbOpen(0));
-    document.getElementById('gallery-expand')!.addEventListener('click', (e) => {
-      e.stopPropagation(); // already handled by galleryEl click, but be explicit
-    });
+    document.getElementById('gallery-expand')!.addEventListener('click', () => lbOpen(0));
 
     document.getElementById('lb-close')!.addEventListener('click', lbClose);
     document.getElementById('lb-prev')!.addEventListener('click', () => lbShow(lbCur - 1));
