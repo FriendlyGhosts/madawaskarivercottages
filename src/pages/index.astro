@@ -198,14 +198,18 @@ const amenities = [
   <!-- HERO -->
   <section class="relative min-h-screen flex flex-col items-center justify-center overflow-hidden" id="hero">
 
-    <!-- Sun (day mode only) -->
-    <div id="sun" style="position:fixed;top: 12%; right: 14%; z-index: 1; overflow:visible;">
+    <!-- Rings canvas — always visible, adapts colour to day/night -->
+    <div id="sun-rings-wrap" style="position:fixed;top:12%;right:14%;z-index:1;overflow:visible;pointer-events:none;width:90px;height:90px;">
       <canvas id="sun-rings-canvas" style="position:absolute;width:340px;height:340px;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;"></canvas>
+    </div>
+
+    <!-- Sun (day mode only) -->
+    <div id="sun" style="position:fixed;top: 12%; right: 14%; z-index: 2;">
       <div style="width:90px;height:90px;border-radius:50%;background:#f5c842;opacity:0.5;box-shadow:0 0 40px 16px rgba(245,200,66,0.22),0 0 80px 40px rgba(245,200,66,0.09);"></div>
     </div>
 
     <!-- Moon (night mode only) -->
-    <div id="moon" style="position:fixed;top: 12%; right: 14%; z-index: 1;">
+    <div id="moon" style="position:fixed;top: 12%; right: 14%; z-index: 2;">
       <div style="width: 90px; height: 90px; border-radius: 50%; background: radial-gradient(circle at 38% 38%, #fffde8, #f5e6b8); box-shadow: 0 0 40px 12px rgba(245,230,150,0.25), 0 0 90px 35px rgba(167,139,250,0.12); position: relative;">
         <div style="position:absolute;width:13px;height:13px;border-radius:50%;background:rgba(180,160,100,0.28);top:28%;left:54%;"></div>
         <div style="position:absolute;width:9px;height:9px;border-radius:50%;background:rgba(180,160,100,0.22);top:56%;left:28%;"></div>
@@ -459,18 +463,12 @@ const amenities = [
       </div>
       <div class="reveal reveal-delay-2" style="position:relative;min-height:220px;">
         <div id="reviews-track" style="position:relative;">
-          {[
-            { quote: "The property is wonderful. Everything that we would want. Could not have asked for more even if we designed it ourselves. The dogs loved it too. What a great place to come home to after some great whitewater canoeing and hiking. We hope to return again soon!", name: "Scot N.", stars: 5 },
-            { quote: "The property and cottage were exactly what we were looking for. The hosts really thought of everything, and were incredibly gracious and helpful. Highly recommend for anyone looking for a place to rest and recharge. Fantastic value.", name: "Tim C.", stars: 5 },
-            { quote: "Our stay was excellent. Hosts were kind and attentive, quick to respond to any questions. The river was great for swimming and canoeing and the view was lovely. Highly recommended and perfect for a quiet cottage getaway.", name: "John H.", stars: 5 },
-            { quote: "Beautiful property and waterfront. Very well kept and very well equipped. Helpful and welcoming hosts.", name: "Danny M.", stars: 5 },
-            { quote: "The cottage is pristine and equipped with absolutely everything you could need. Ample space for a family inside and out. The river is gorgeous and we enjoyed several trips using the canoe. If you're looking for a peaceful relaxing place to stay with outdoor activities you will not find anything better.", name: "Lynn H.", stars: 5 },
-          ].map((r, i) => (
+          {[0,1,2,3,4].map(i => (
             <div class="review-card" data-index={i} style={`display:${i === 0 ? 'block' : 'none'};`}>
               <div class="text-center px-4 md:px-16">
-                <div class="mb-6" style="color: var(--color-accent); letter-spacing: 0.2em; font-size: 13px;">{'★'.repeat(r.stars)}</div>
-                <p class="text-xl md:text-2xl font-light leading-relaxed mb-8" style={`font-family:'Cormorant',serif; color: var(--color-text)`}>"{r.quote}"</p>
-                <div class="text-xs tracking-[0.18em] uppercase" style="color: var(--color-muted)">{r.name}</div>
+                <div class="mb-6" style="color: var(--color-accent); letter-spacing: 0.2em; font-size: 13px;">★★★★★</div>
+                <p class="review-quote text-xl md:text-2xl font-light leading-relaxed mb-8" style="font-family:'Cormorant',serif; color: var(--color-text)"></p>
+                <div class="review-name text-xs tracking-[0.18em] uppercase" style="color: var(--color-muted)"></div>
               </div>
             </div>
           ))}
@@ -485,8 +483,78 @@ const amenities = [
   </section>
   <script is:inline>
     (function() {
+      // ── Real guest reviews pool (5-star only) ──────────────────────────────
+      var REVIEWS = [
+        { q: "Private launch into the Madawaska. Perfect location to access different sections of river and some local lakes. Also took in a hike just three kilometres down the road. The cottage is quite spacious and we found it exactly as advertised.", n: "Fraoch · Ottawa" },
+        { q: "A little piece of paradise. Comfortable, spacious, and enjoyed the canoe. Thanks for a great stay.", n: "Claire · Elora" },
+        { q: "Luka was an absolutely fantastic host and so kind. His place was unpretentious, simple and comfortable — everything a good cottage should be. I got to reconnect with myself and nature while I was there and I left feeling refreshed and grateful.", n: "Michelle · Peterborough" },
+        { q: "Always a pleasure staying here. It has become a yearly event. Can't wait to go back next year.", n: "Justin · Burlington" },
+        { q: "We really enjoyed our stay at Owl's Nest. Lovely cabin with a well equipped kitchen and beautifully decorated space. The river is lovely and calm in the mornings — a doe and fawn came by to say hello one morning.", n: "Rachel · Strathroy" },
+        { q: "Had a wonderful stay at this rustic and beautiful spot. The star gazing was top notch!! The water was perfect — paddling out on our SUP to jump into the current was refreshing and fun. The proximity to amazing hikes was appreciated.", n: "Sarah · Toronto" },
+        { q: "Thoroughly enjoyed the place and the quiet surroundings…very impressed with the cleanliness and the details in the little things to make your stay great! Come ready to relax and unwind!", n: "Janice · Welland" },
+        { q: "River flows right on the property and the surroundings are serene. When we arrived, the grass was tall and Luka arrived within an hour and cut it so we could enjoy the evening outside. An outstanding host.", n: "Aniruddha · Toronto" },
+        { q: "Gorgeous property and everything we needed for a relaxing weekend away!!", n: "Emilie · Ottawa" },
+        { q: "Amazing stay yet again! We absolutely love this Airbnb. The location, the cleanliness, the value, the hospitality. Wonderful experience and perfect place to make memories. A definite must stay!", n: "Brittany · Windsor" },
+        { q: "Lovely spot to chill out. The cottage is rustic but comfortable. The kitchen is well stocked. Great value. Very quiet — no sound of highway traffic. Bring your s'more kit!", n: "Kyla · Ottawa" },
+        { q: "Very beautiful area, lots of space around the cottage giving good privacy and room for our dogs to play. The cottage itself was well stocked, comfy and cute.", n: "Zosia · St. Catharines" },
+        { q: "All we wanted was to check out from the city and see the stars by a firepit and we got that and more. We particularly enjoyed the canoe, and there was surprisingly cheap gas at the store nearby.", n: "Atsushi · Toronto" },
+        { q: "Check in was super easy. Location is very private and good swimming!! Cottage was very very clean and cozy! We will be back.", n: "Amanda" },
+        { q: "The deck overlooks the Madawaska river and is ideal to unwind. Luka was friendly and always willing to help us and ensured we were comfortable. Any questions he will reply within a short time. We will come again.", n: "Eomal · Brampton" },
+        { q: "This gem tucked on the Madawaska River is ideal: the cabin sits on a small hill overlooking the flowing river, peaceful and beautiful, cosy and cute. Luka is a terrific host — attentive and quickly responsive.", n: "Kelby · Toronto" },
+        { q: "Fishing was awesome! Caught some huge catfish right off the dock. The cabin was clean, comfy, and had everything we needed. Luka was super friendly and helpful. We would definitely visit again!", n: "Emily · Niagara Falls" },
+        { q: "Excellent location for canoeing the rapids on the Lower Madawaska. We did the section from below Slate Falls to the cottage three times. Next time we visit we'll run the full section from Aumonds Bay. We plan to return.", n: "Geoff · Knowlton" },
+        { q: "Luka was a great host! Responsive and helpful! The place is so clean, has beautiful scenery and is private. We'll definitely recommend it to others and hope to come back again!", n: "Pat · Markham" },
+        { q: "Spent the weekend and wished we could have spent a week. The cabin is amazing and the wood stove makes the experience. 100% recommend and family friendly.", n: "Jeanna · Bath" },
+        { q: "Enjoyed our stay, very peaceful with nature and quiet to rest and relax.", n: "Mike · Toronto" },
+        { q: "A wonderful place to relax and recharge! Luka and Tori are friendly, responsive hosts. The cabin was everything we had hoped for.", n: "Angela" },
+        { q: "The cottage was cozy and clean, the view of the river was beautiful. The pictures were accurate, Luka was flexible and friendly, and we enjoyed our stay.", n: "Beau" },
+        { q: "My family and I had a great time — we will definitely be booking another stay. The location was very quiet and peaceful, we loved the fire pit and the little dock was great for fishing.", n: "Mylaine" },
+        { q: "My friend and I were delighted with this comfortable cottage and especially the beautiful surroundings. A bonus is the proximity to two great hiking trails — Jameson Mountain and Griffith Uplands.", n: "Wendy · Killaloe" },
+        { q: "We wanted a quiet place to get away from the city. This was the perfect little getaway! My favourite part of the day was having my morning coffee on the deck and listening to the sounds of nature!", n: "Allison" },
+        { q: "Staying at Luka's cottage was a fantastic getaway. He even brought over firewood and a canoe for us to use. The cottage has private access to the river and everything was very clean. Highly recommended!", n: "Ron · Toronto" },
+        { q: "We absolutely loved this peaceful little retreat! We even saw a moose regularly across the river! Luka was very easy to communicate with and responded to anything we required.", n: "Madisen · Belleville" },
+        { q: "The view across the river was beautiful. We saw a moose grazing for over 2 hours one morning. Luka is a great host — I'd recommend this place to anyone wanting to get away and be surrounded by nature.", n: "Justin · Burlington" },
+        { q: "What a great cottage! Had such a relaxing time! My dogs absolutely loved it! A peaceful location in nature.", n: "Skyler · Montréal" },
+        { q: "Luka was an extremely responsive host — providing canoe/kayaks upon request. The cabin provided a perfect getaway. Very clean and comfortable, and the location is wonderfully peaceful and beautiful.", n: "Lisa · Durango" },
+        { q: "Words can't describe how beautiful the cottage and property were. Luka was quick to respond to any questions we had. Everything listed was there and in excellent working order. Will be back for sure!", n: "Jason · Hamilton" },
+        { q: "Calm, peaceful getaway tucked away in the midst of nature! Wonderful location, ample privacy and great amenities. Luka was a great host, very responsive and made sure we had a great stay!", n: "Shamanth · Bengaluru" },
+        { q: "Such an amazing place and host! The view was scenic, the place was super clean, and Luka responded to queries with near lightning speed. Thank you so much!", n: "Chippy" },
+        { q: "Five stars all around. The cottage was perfect, the view just as. Luka and his family went above and beyond — during a power outage they set us up in another cottage with a wood stove already roaring. I can't wait to come back.", n: "Carolyn · Ottawa" },
+        { q: "The house is very nice and well equipped, the environment is superb, especially in autumn. Luka and his father are attentive hosts and communication was very easy.", n: "Audrey · Kingston" },
+        { q: "We had an amazing retreat — all we wanted was to check out from the city and see the stars by a firepit and we got that and more.", n: "Atsushi · Toronto" },
+        { q: "The cottage had everything we needed and more, even DVDs for rainy days! We even saw a moose across the river. Luka was very easy to communicate with. We definitely recommend and hope to return again.", n: "Madisen · Belleville" },
+        { q: "Had a wonderful short stay. The cottage was as described, the property along the river is beautiful. I would love to return.", n: "Ruth · Canada" },
+        { q: "Beautiful clean cottage, host was a great communicator.", n: "Mike · Toronto" },
+        { q: "My favourite part was morning coffee on the deck listening to nature. Very private and peaceful. Luka was friendly and helpful! It was a wonderful week.", n: "Allison" },
+        { q: "We had a great time at Luka's cottage on Madawaska River. It is absolutely beautiful and we couldn't have asked for anything better! Looking forward to visiting again!", n: "Ayslin · Ottawa" },
+        { q: "This place was absolutely perfect for our family — clean and had everything we were looking for! Went with our 2 and 4 year old and they loved spending so much time on the water!", n: "Jazzmin" },
+        { q: "The cabin provided a perfect getaway. Very clean and comfortable, and the location is wonderfully peaceful and beautiful. Had a great time watching the blue jays swooping across the property in the morning.", n: "Lisa · Durango" },
+        { q: "Great wonderful cottage on a nice private road and river. Luka was quick to respond to any questions we had. Everything listed was there and in excellent working order. Would recommend to anyone.", n: "Jason · Hamilton" },
+        { q: "Very cozy and beautiful place to relax and enjoy nature by the quiet river.", n: "Majid" },
+        { q: "Our family had an absolutely wonderful vacation here. Very private with gorgeous scenery and wildlife. We were in a heat wave and were very grateful to have an AC unit available. We will definitely return.", n: "April" },
+        { q: "This cottage is cute as a button. It was clean and looked just as expected. Luka was friendly and helpful and quick to respond to messages.", n: "Janet" },
+        { q: "The place was excellent, very serene and very peaceful. The cottage was equipped with a lot of things to make the experience great. Communication with the host was excellent.", n: "Pushkar · Markham" },
+        { q: "Great place and host! Will more than likely be booking again this summer! Luka was nice enough to let us have a later checkout!", n: "Veronica" },
+      ];
+
+      // Shuffle and pick 5 random reviews
+      function pickRandom(arr, n) {
+        var pool = arr.slice();
+        for (var i = pool.length - 1; i > 0; i--) {
+          var j = Math.floor(Math.random() * (i + 1));
+          var tmp = pool[i]; pool[i] = pool[j]; pool[j] = tmp;
+        }
+        return pool.slice(0, n);
+      }
+      var picked = pickRandom(REVIEWS, 5);
+      document.querySelectorAll('.review-card').forEach(function(card, i) {
+        card.querySelector('.review-quote').textContent = '“' + picked[i].q + '”';
+        card.querySelector('.review-name').textContent = picked[i].n;
+      });
+
+      // ── Carousel ──────────────────────────────────────────────────────────
       var cards = document.querySelectorAll('.review-card');
-      var dots = document.querySelectorAll('[data-dot]');
+      var dots  = document.querySelectorAll('[data-dot]');
       var current = 0;
       function show(n) {
         cards[current].style.display = 'none';
@@ -497,7 +565,8 @@ const amenities = [
       }
       dots.forEach(function(d) { d.addEventListener('click', function() { show(+d.dataset.dot); }); });
       setInterval(function() { show(current + 1); }, 6000);
-      // Fix calendar today marker using browser local date
+
+      // ── Calendar today (timezone-safe) ────────────────────────────────────
       var today = new Date();
       var ds = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
       document.querySelectorAll('[data-date="' + ds + '"]').forEach(function(el) {
@@ -509,7 +578,7 @@ const amenities = [
   <script is:inline>
   (function() {
     var srCanvas = document.getElementById('sun-rings-canvas');
-    var sunEl = document.getElementById('sun');
+    var sunEl = document.getElementById('sun-rings-wrap');
     if (!srCanvas || !sunEl) return;
     var srCtx = srCanvas.getContext('2d');
 
@@ -588,9 +657,7 @@ const amenities = [
     }
 
     function drawSunRings() {
-      var isNight = document.documentElement.classList.contains('night');
       srCtx.clearRect(0, 0, CS, CS);
-      if (isNight) return;
 
       // Prune dead pulses
       bowStates.forEach(function(bow) {
@@ -600,7 +667,9 @@ const amenities = [
         });
       });
 
-      var alphas   = [0.38, 0.26, 0.17];
+      var isNight  = document.documentElement.classList.contains('night');
+      var dayA     = [0.38, 0.26, 0.17];
+      var nightA   = [0.28, 0.18, 0.11];
       var widths   = [1.6,  1.2,  0.9];
 
       rings.forEach(function(ring, ri) {
@@ -616,8 +685,11 @@ const amenities = [
           else srCtx.lineTo(x, y);
         }
         srCtx.closePath();
-        srCtx.strokeStyle = 'rgba(245,200,66,' + alphas[ri] + ')';
-        srCtx.lineWidth   = widths[ri];
+        var a = isNight ? nightA[ri] : dayA[ri];
+        srCtx.strokeStyle = isNight
+          ? ('rgba(82,184,160,' + a + ')')
+          : ('rgba(245,200,66,' + a + ')');
+        srCtx.lineWidth = widths[ri];
         srCtx.stroke();
       });
 
