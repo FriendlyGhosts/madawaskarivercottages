@@ -199,12 +199,12 @@ const amenities = [
   <section class="relative min-h-screen flex flex-col items-center justify-center overflow-hidden" id="hero">
 
     <!-- Sun (day mode only) -->
-    <div id="sun" class="absolute" style="top: 12%; right: 14%; z-index: 1;">
+    <div id="sun" style="position:fixed;top: 12%; right: 14%; z-index: 1;">
       <div style="width:90px;height:90px;border-radius:50%;background:#f5c842;opacity:0.5;box-shadow:0 0 40px 16px rgba(245,200,66,0.22),0 0 80px 40px rgba(245,200,66,0.09);"></div>
     </div>
 
     <!-- Moon (night mode only) -->
-    <div id="moon" class="absolute" style="top: 12%; right: 14%; z-index: 1;">
+    <div id="moon" style="position:fixed;top: 12%; right: 14%; z-index: 1;">
       <div style="width: 90px; height: 90px; border-radius: 50%; background: radial-gradient(circle at 38% 38%, #fffde8, #f5e6b8); box-shadow: 0 0 40px 12px rgba(245,230,150,0.25), 0 0 90px 35px rgba(167,139,250,0.12); position: relative;">
         <div style="position:absolute;width:13px;height:13px;border-radius:50%;background:rgba(180,160,100,0.28);top:28%;left:54%;"></div>
         <div style="position:absolute;width:9px;height:9px;border-radius:50%;background:rgba(180,160,100,0.22);top:56%;left:28%;"></div>
