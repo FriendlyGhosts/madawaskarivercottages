@@ -198,6 +198,17 @@ const amenities = [
   <!-- HERO -->
   <section class="relative min-h-screen flex flex-col items-center justify-center overflow-hidden" id="hero">
 
+    <!-- Sun (day mode only) -->
+    <div id="sun" class="absolute" style="top: 12%; right: 14%; z-index: 1;">
+      <div style="position:relative;width:90px;height:90px;">
+        <!-- Rays -->
+        <div style="position:absolute;inset:-22px;border-radius:50%;background:radial-gradient(circle, rgba(255,210,80,0.28) 0%, rgba(255,180,40,0.10) 55%, transparent 72%);"></div>
+        <div style="position:absolute;inset:-38px;border-radius:50%;background:radial-gradient(circle, rgba(255,200,60,0.10) 0%, transparent 65%);"></div>
+        <!-- Disc -->
+        <div style="width:90px;height:90px;border-radius:50%;background:radial-gradient(circle at 38% 35%, #fff8d0, #ffd84a 55%, #ffb830);box-shadow:0 0 32px 10px rgba(255,210,80,0.35),0 0 70px 28px rgba(255,180,40,0.15);"></div>
+      </div>
+    </div>
+
     <!-- Moon (night mode only) -->
     <div id="moon" class="absolute" style="top: 12%; right: 14%; z-index: 1;">
       <div style="width: 90px; height: 90px; border-radius: 50%; background: radial-gradient(circle at 38% 38%, #fffde8, #f5e6b8); box-shadow: 0 0 40px 12px rgba(245,230,150,0.25), 0 0 90px 35px rgba(167,139,250,0.12); position: relative;">

@@ -29,6 +29,8 @@ html.night {
   --color-watermark: rgba(82, 184, 160, 0.06);
 }
 
+#sun  { display: block; }
+html.night #sun  { display: none; }
 #moon { display: none; }
 html.night #moon { display: block; }
 
