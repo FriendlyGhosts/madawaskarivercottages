@@ -122,7 +122,7 @@ export async function getStaticPaths() {
       icalUrl: 'https://www.airbnb.ca/calendar/ical/679589509313140703.ics?t=2406443036c346718124201677870044',
       description: 'A private two-bedroom cabin set right on the Madawaska. Hike the Uplands Trail, boulder at Calabogie, kayak the rapids, or spend a lazy afternoon paddleboarding. End your day at the fire pit under the stars.',
       longDescription: 'Step off the deck and onto the river. Whitetail Lodge offers direct access to the Madawaska — a canoe and kayak are waiting for you. The two-bedroom layout is intimate and well-appointed, with a fully equipped kitchen and a wood fire to take the chill off cool evenings. The surrounding land is yours: 2 private acres with mature trees, a dock for morning coffee, and total quiet.',
-      rate: 240,
+      rate: 185,
       isTreehouse: false,
       features: ['Private riverfront dock', 'Canoe & kayak included', 'Firepit & BBQ', 'Fully equipped kitchen', 'Deck with patio', 'Life jackets provided', '2 acres of privacy', 'Pet friendly'],
     },
@@ -140,7 +140,7 @@ export async function getStaticPaths() {
       icalUrl: 'https://www.airbnb.ca/calendar/ical/895861420839792739.ics?t=0410eea1e1f54d79b84c49a1a4c43c1a',
       description: 'Nestled on 2 secluded acres right on the river. Thousands of acres of wild, rolling landscape and hidden lakes wait to be discovered — and a smoldering fire will be waiting for your return.',
       longDescription: "Owl's Nest sits on a gentle rise above the Madawaska, catching the morning light and the evening mist. Two bedrooms, a cozy living space, and a kitchen stocked for proper cooking. The dock is your base of operations — launch the canoe, cast a line, or just watch the river go by. The surrounding forest keeps the neighbours at a distance.",
-      rate: 240,
+      rate: 195,
       isTreehouse: false,
       features: ['Private riverfront dock', 'Canoe & kayak included', 'Firepit & BBQ', 'Fully equipped kitchen', 'Deck with patio', 'Life jackets provided', '2 acres of privacy'],
     },
@@ -158,7 +158,7 @@ export async function getStaticPaths() {
       icalUrl: 'https://www.airbnb.ca/calendar/ical/1037163450739528690.ics?t=a7116dfe254144de9345e479c481dddd',
       description: 'Tucked away in the forest, right on the Madawaska. Private river access for paddleboarding, kayaking, and canoeing. Early risers catch the morning mist from the dock with a cup of tea.',
       longDescription: 'Cedarwood Cabin earns its name — warm wood tones, forest on three sides, and the river right at the bottom of the property. Wake up to birdsong, walk down to the dock, and spend your mornings on the water before the world stirs. Two bedrooms sleep four in comfort, and the kitchen is set up for real meals after long days outside.',
-      rate: 240,
+      rate: 185,
       isTreehouse: false,
       features: ['Private riverfront dock', 'Canoe & kayak included', 'Firepit & BBQ', 'Fully equipped kitchen', 'Deck with patio', 'Life jackets provided', '2 acres of privacy'],
     },
@@ -176,7 +176,7 @@ export async function getStaticPaths() {
       icalUrl: null,
       description: 'Spacious and comfortable with room for the whole crew. A full kitchen, large living area, fire pit, and private dock on the Madawaska River.',
       longDescription: "When the whole group decides to get away, Lazy Bear Lodge is built for it. Sleeping six across a queen, a double, and a pull-out sofa, there's space to spread out without stepping on each other. The large living area is the natural gathering point — morning coffee, card games at midnight, everything in between. Outside: a fire pit, a dock, canoes, and the Madawaska rolling past. Pets welcome.",
-      rate: 240,
+      rate: 235,
       isTreehouse: false,
       features: ['Private riverfront dock', 'Canoe & kayak included', 'Firepit & BBQ', 'Fully equipped kitchen', 'Deck with patio', 'Life jackets provided', '2 acres of privacy', 'Pet friendly', 'Sauna'],
     },
@@ -194,7 +194,7 @@ export async function getStaticPaths() {
       icalUrl: 'https://www.airbnb.ca/calendar/ical/1042917519190055212.ics?t=2c3e8664ed5f40e987f75f61a727f200',
       description: "Tucked into the forest, 650 m from the road along a rustic trail — this one isn't on the river. It's something different. No neighbours, no noise, just trees and sky.",
       longDescription: "Follow the trail 650 metres into the forest and leave the road behind entirely. The Treehouse is a different kind of escape — no river, no neighbours, just a canopy of trees and profound quiet. A wood stove keeps things warm as temperatures drop. The deck catches the light through the leaves. This is for the two of you who want to disappear completely.",
-      rate: 240,
+      rate: 155,
       isTreehouse: true,
       features: ['Firepit & BBQ', 'Wood stove', 'Fully equipped kitchen', 'Private deck', 'Deep forest seclusion', 'Trails on your doorstep'],
     },
@@ -353,18 +353,6 @@ const calYear = calMonths[0].year;
     /* Use visibility (not display) so the panel never changes height */
     .calc-hidden { visibility: hidden; }
 
-    /* ── Pet counter ─────────────────────────────────────── */
-    .pet-btn {
-      width: 28px; height: 28px; border-radius: 50%;
-      border: 1px solid var(--color-border);
-      background: none; cursor: pointer; font-size: 18px; line-height: 1;
-      color: var(--color-text);
-      display: flex; align-items: center; justify-content: center;
-      transition: border-color 0.2s, color 0.2s;
-    }
-    .pet-btn:hover:not(:disabled) { border-color: var(--color-accent); color: var(--color-accent); }
-    .pet-btn:disabled { opacity: 0.25; cursor: not-allowed; }
-
     /* ── Misc ────────────────────────────────────────────── */
     .divider { width: 48px; height: 1px; background: var(--color-accent); }
     .feature-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--color-accent); flex-shrink: 0; margin-top: 7px; }
@@ -493,34 +481,12 @@ const calYear = calMonths[0].year;
           <span class="calc-label">Duration</span>
           <span class="calc-value" id="calc-nights" style="color:var(--color-muted);">—</span>
         </div>
-
-        {/* Pet counter — only rendered for pet-friendly properties */}
-        {pets && (
-          <>
-            <div class="calc-row">
-              <span class="calc-label">
-                Pets
-                <span style="font-size:10px; margin-left:4px; letter-spacing:0.04em;">($50 / pet · max 3)</span>
-              </span>
-              <div style="display:flex; align-items:center; gap:12px;">
-                <button class="pet-btn" id="pet-dec" disabled aria-label="Remove pet">−</button>
-                <span id="pet-count" style="min-width:1ch; text-align:center; font-size:13px; color:var(--color-text);">0</span>
-                <button class="pet-btn" id="pet-inc" aria-label="Add pet">+</button>
-              </div>
-            </div>
-            <div class="calc-row calc-hidden" id="pet-fee-row">
-              <span class="calc-label">Pet fee</span>
-              <span class="calc-value" id="calc-pet-fee" style="color:var(--color-text);">—</span>
-            </div>
-          </>
-        )}
-
         <div class="calc-row" id="calc-total-row">
           <span class="calc-label" style="font-weight:500">Estimated total</span>
           <span class="calc-value" id="calc-total" style="color:var(--color-muted);">—</span>
         </div>
         <p id="calc-footnote" class="calc-hidden" style="font-size:10px; color:var(--color-muted); margin-top:10px; letter-spacing:0.06em;">
-          Minimum 1-week stay · Rates exclude taxes · $50/pet fee · 50% deposit to confirm
+          Minimum 1-week stay · Rates exclude taxes · 50% deposit to confirm
         </p>
       </div>
 
@@ -590,16 +556,13 @@ const calYear = calMonths[0].year;
   </main>
 
   <!-- ── Data injection for client JS ─────────────────────────────────────── -->
-  <script id="page-data" type="application/json" set:html={JSON.stringify({ bookedDates, rate, pets })}></script>
+  <script id="page-data" type="application/json" set:html={JSON.stringify({ bookedDates, rate })}></script>
 
   <script>
     // ── Load data ─────────────────────────────────────────────────────────────
     const _raw   = JSON.parse(document.getElementById('page-data')!.textContent!);
     const BOOKED: Set<string> = new Set(_raw.bookedDates);
-    const RATE: number  = _raw.rate;
-    const PETS_OK: boolean = _raw.pets;
-    const PET_FEE = 50;
-    let petCount = 0;
+    const RATE: number = _raw.rate;
 
     // ── Photo gallery ─────────────────────────────────────────────────────────
     const galleryImgs = document.querySelectorAll<HTMLElement>('.gallery-img');
@@ -698,10 +661,9 @@ const calYear = calMonths[0].year;
       const nightsEl   = document.getElementById('calc-nights')!;
       const totalEl    = document.getElementById('calc-total')!;
       const footnoteEl = document.getElementById('calc-footnote')!;
-      const petFeeRow  = document.getElementById('pet-fee-row');
-      const petFeeEl   = document.getElementById('calc-pet-fee');
 
       if (!start) {
+        // Reset to empty state — keep layout, just show placeholders
         checkinEl.textContent  = 'Select a date below';
         checkinEl.style.fontStyle = 'italic';
         checkinEl.style.color     = 'var(--color-muted)';
@@ -711,17 +673,15 @@ const calYear = calMonths[0].year;
         nightsEl.style.color = 'var(--color-muted)';
         totalEl.textContent  = '—';
         totalEl.style.color  = 'var(--color-muted)';
-        totalEl.style.fontSize = '';
         clearBtn.classList.add('calc-hidden');
         footnoteEl.classList.add('calc-hidden');
-        if (petFeeRow) petFeeRow.classList.add('calc-hidden');
         return;
       }
 
       const s = (start <= (end ?? start)) ? start : (end ?? start);
       const e = end ? (start <= end ? end : start) : null;
 
-      checkinEl.textContent     = fmtDate(s);
+      checkinEl.textContent  = fmtDate(s);
       checkinEl.style.fontStyle = 'normal';
       checkinEl.style.color     = 'var(--color-text)';
       clearBtn.classList.remove('calc-hidden');
@@ -729,36 +689,21 @@ const calYear = calMonths[0].year;
       if (e && s !== e) {
         checkoutEl.textContent = fmtDate(e);
         checkoutEl.style.color = 'var(--color-text)';
-        const nights   = nightsBetween(s, e);
-        const petTotal = petCount * PET_FEE;
-        const grand    = nights * RATE + petTotal;
-
+        const nights = nightsBetween(s, e);
         nightsEl.textContent = `${nights} night${nights !== 1 ? 's' : ''}`;
         nightsEl.style.color = 'var(--color-text)';
-
-        // Pet fee row
-        if (petFeeRow && petFeeEl) {
-          if (petCount > 0) {
-            petFeeEl.textContent = `$${petTotal.toLocaleString()}`;
-            petFeeRow.classList.remove('calc-hidden');
-          } else {
-            petFeeRow.classList.add('calc-hidden');
-          }
-        }
-
-        totalEl.textContent    = `$${grand.toLocaleString()}`;
-        totalEl.style.color    = 'var(--color-accent)';
+        totalEl.textContent  = `$${(nights * RATE).toLocaleString()}`;
+        totalEl.style.color  = 'var(--color-accent)';
         totalEl.style.fontSize = '20px';
         footnoteEl.classList.remove('calc-hidden');
       } else {
         checkoutEl.textContent = '— select check-out date';
         checkoutEl.style.color = 'var(--color-muted)';
-        nightsEl.textContent   = '—';
-        nightsEl.style.color   = 'var(--color-muted)';
-        totalEl.textContent    = '—';
-        totalEl.style.color    = 'var(--color-muted)';
+        nightsEl.textContent = '—';
+        nightsEl.style.color = 'var(--color-muted)';
+        totalEl.textContent  = '—';
+        totalEl.style.color  = 'var(--color-muted)';
         totalEl.style.fontSize = '';
-        if (petFeeRow) petFeeRow.classList.add('calc-hidden');
         footnoteEl.classList.add('calc-hidden');
       }
     }
@@ -880,31 +825,7 @@ const calYear = calMonths[0].year;
     }, { passive: true });
 
     // Clear button
-    document.getElementById('calc-clear')!.addEventListener('click', () => {
-      setSelection(null, null);
-    });
-
-    // ── Pet counter buttons ───────────────────────────────────────────────────
-    if (PETS_OK) {
-      const decBtn    = document.getElementById('pet-dec') as HTMLButtonElement | null;
-      const incBtn    = document.getElementById('pet-inc') as HTMLButtonElement | null;
-      const countEl   = document.getElementById('pet-count')!;
-
-      function updatePetUI() {
-        countEl.textContent = String(petCount);
-        if (decBtn) decBtn.disabled = petCount === 0;
-        if (incBtn) incBtn.disabled = petCount === 3;
-        // Re-run calc so total updates immediately
-        updateCalc(selStart, selEnd);
-      }
-
-      decBtn?.addEventListener('click', () => {
-        if (petCount > 0) { petCount--; updatePetUI(); }
-      });
-      incBtn?.addEventListener('click', () => {
-        if (petCount < 3) { petCount++; updatePetUI(); }
-      });
-    }
+    document.getElementById('calc-clear')!.addEventListener('click', () => setSelection(null, null));
 
     // ── Today highlight ───────────────────────────────────────────────────────
     const now = new Date();
