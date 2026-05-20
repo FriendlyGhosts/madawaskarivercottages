@@ -16,17 +16,17 @@
 }
 
 html.night {
-  --color-bg: #0d1117;
-  --color-surface: #141c26;
-  --color-border: #243040;
-  --color-text: #d8e4ec;
-  --color-muted: #6a8898;
-  --color-accent: #6aaed4;
-  --color-accent-dim: #4a90b8;
-  --color-hover: #1a2838;
-  --gradient-card: linear-gradient(135deg, #141e2e, #0d1520);
-  --gradient-map: linear-gradient(135deg, #141e2e, #0d1520);
-  --color-watermark: rgba(106, 174, 212, 0.06);
+  --color-bg: #0c1210;
+  --color-surface: #121e1a;
+  --color-border: #1e3028;
+  --color-text: #ddeae4;
+  --color-muted: #6a9888;
+  --color-accent: #52b8a0;
+  --color-accent-dim: #38906e;
+  --color-hover: #162820;
+  --gradient-card: linear-gradient(135deg, #111e1a, #0b1612);
+  --gradient-map: linear-gradient(135deg, #111e1a, #0b1612);
+  --color-watermark: rgba(82, 184, 160, 0.06);
 }
 
 #moon { display: none; }
@@ -56,7 +56,7 @@ body {
 }
 
 h1, h2, h3, h4 {
-  font-family: 'Josefin Slab', serif;
+  font-family: 'Cormorant', serif;
 }
 
 #cursor-dot {
@@ -93,10 +93,10 @@ body.cursor-hover #cursor-ring {
 }
 
 html.night #cursor-ring {
-  border-color: rgba(106, 174, 212, 0.5);
+  border-color: rgba(82, 184, 160, 0.5);
 }
 html.night body.cursor-hover #cursor-ring {
-  border-color: rgba(106, 174, 212, 0.9);
+  border-color: rgba(82, 184, 160, 0.9);
 }
 
 .reveal {
