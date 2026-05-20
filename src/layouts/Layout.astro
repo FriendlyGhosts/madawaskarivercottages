@@ -122,7 +122,7 @@ const {
       const isTouchDevice = navigator.maxTouchPoints > 0;
       const ENGAGE_DIST = isTouchDevice ? 22 : 11;
       const SNAP_DIST   = isTouchDevice ? 28 : 62;
-      const BOW_HW      = 140;
+      const BOW_HW      = 85;
 
       const PULSE_SPEED = 2.2;
       const PULSE_DECAY = 0.0018;
@@ -134,10 +134,11 @@ const {
         return y;
       }
 
-      // Cosine bell: smooth rounded peak, continuous derivatives everywhere — no spikes
+      // Squared cosine bell: smooth but steep sides — tent-like without the spike
       function bell(dx: number, hw: number): number {
         if (Math.abs(dx) >= hw) return 0;
-        return 0.5 * (1 + Math.cos(Math.PI * dx / hw));
+        const b = 0.5 * (1 + Math.cos(Math.PI * dx / hw));
+        return b * b;
       }
 
       function bowDeform(st: BowState, x: number, t: number): number {
@@ -168,7 +169,7 @@ const {
         return compY(gl, x, t) + bowDeform(bowStates[li], x, t);
       }
 
-      const NW = 500;
+      const NW = 700;
       function drawGLayer(gl: GLayer, li: number) {
         const isNight = document.documentElement.classList.contains('night');
         const bY   = gl.baseRatio * wH;
