@@ -123,6 +123,12 @@ html.night body.cursor-hover #cursor-ring {
   background: var(--color-accent);
 }
 
+/* All page sections sit above the sun/moon background decorations */
+section {
+  position: relative;
+  z-index: 1;
+}
+
 /* Nav: transparent in day, dark-teal backdrop in night */
 nav {
   background: transparent;
