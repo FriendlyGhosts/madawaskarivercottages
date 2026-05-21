@@ -136,6 +136,20 @@ section {
   z-index: 1;
 }
 
+/* ── Zen mode easter egg ── */
+nav, section, footer {
+  transition: opacity 1.4s ease;
+}
+html.zen-mode nav,
+html.zen-mode section,
+html.zen-mode footer {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+html.zen-mode body {
+  overflow: hidden;
+}
+
 /* Nav: transparent in day, dark-teal backdrop in night */
 nav {
   background: transparent;

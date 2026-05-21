@@ -170,6 +170,22 @@ const amenities = [
 ---
 
 <Layout>
+  <!-- Sun, moon, rings — direct body children so zen mode can keep them visible -->
+  <div id="sun-rings-wrap" style="position:fixed;top:12%;right:14%;z-index:2;overflow:visible;pointer-events:none;width:90px;height:90px;">
+    <canvas id="sun-rings-canvas" style="position:absolute;width:340px;height:340px;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;"></canvas>
+  </div>
+  <div id="sun" style="position:fixed;top:12%;right:14%;z-index:2;cursor:pointer;">
+    <div style="width:90px;height:90px;border-radius:50%;background:#f5c842;opacity:0.5;box-shadow:0 0 40px 16px rgba(245,200,66,0.22),0 0 80px 40px rgba(245,200,66,0.09);"></div>
+  </div>
+  <div id="moon" style="position:fixed;top:12%;right:14%;z-index:2;cursor:pointer;">
+    <div style="width: 90px; height: 90px; border-radius: 50%; background: radial-gradient(circle at 38% 38%, #fffde8, #f5e6b8); box-shadow: 0 0 40px 12px rgba(245,230,150,0.25), 0 0 90px 35px rgba(167,139,250,0.12); position: relative;">
+      <div style="position:absolute;width:13px;height:13px;border-radius:50%;background:rgba(180,160,100,0.28);top:28%;left:54%;"></div>
+      <div style="position:absolute;width:9px;height:9px;border-radius:50%;background:rgba(180,160,100,0.22);top:56%;left:28%;"></div>
+      <div style="position:absolute;width:6px;height:6px;border-radius:50%;background:rgba(180,160,100,0.18);top:18%;left:22%;"></div>
+      <div style="position:absolute;width:5px;height:5px;border-radius:50%;background:rgba(180,160,100,0.15);top:68%;left:60%;"></div>
+    </div>
+  </div>
+
   <!-- NAV -->
   <nav class="fixed top-0 left-0 right-0 z-50 px-5 py-3 md:py-4">
     <!-- Desktop: stacked centered layout -->
@@ -201,28 +217,6 @@ const amenities = [
 
   <!-- HERO -->
   <section class="relative min-h-screen flex flex-col items-center justify-center overflow-hidden" id="hero">
-
-    <!-- Rings canvas — always visible, adapts colour to day/night -->
-    <div id="sun-rings-wrap" style="position:fixed;top:12%;right:14%;z-index:0;overflow:visible;pointer-events:none;width:90px;height:90px;">
-      <canvas id="sun-rings-canvas" style="position:absolute;width:340px;height:340px;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;"></canvas>
-    </div>
-
-    <!-- Sun (day mode only) -->
-    <div id="sun" style="position:fixed;top: 12%; right: 14%; z-index: 0;">
-      <div style="width:90px;height:90px;border-radius:50%;background:#f5c842;opacity:0.5;box-shadow:0 0 40px 16px rgba(245,200,66,0.22),0 0 80px 40px rgba(245,200,66,0.09);"></div>
-    </div>
-
-    <!-- Moon (night mode only) -->
-    <div id="moon" style="position:fixed;top: 12%; right: 14%; z-index: 0;">
-      <div style="width: 90px; height: 90px; border-radius: 50%; background: radial-gradient(circle at 38% 38%, #fffde8, #f5e6b8); box-shadow: 0 0 40px 12px rgba(245,230,150,0.25), 0 0 90px 35px rgba(167,139,250,0.12); position: relative;">
-        <div style="position:absolute;width:13px;height:13px;border-radius:50%;background:rgba(180,160,100,0.28);top:28%;left:54%;"></div>
-        <div style="position:absolute;width:9px;height:9px;border-radius:50%;background:rgba(180,160,100,0.22);top:56%;left:28%;"></div>
-        <div style="position:absolute;width:6px;height:6px;border-radius:50%;background:rgba(180,160,100,0.18);top:18%;left:22%;"></div>
-        <div style="position:absolute;width:5px;height:5px;border-radius:50%;background:rgba(180,160,100,0.15);top:68%;left:60%;"></div>
-      </div>
-    </div>
-
-
     <div class="relative z-10 text-center px-6 max-w-4xl mx-auto">
       <p class="reveal text-xs tracking-[0.35em] uppercase mb-8" style="color: var(--color-accent)">
         Griffith, Ontario · Madawaska River
@@ -858,6 +852,23 @@ const amenities = [
     document.querySelectorAll('input[name="font-pick"]').forEach(function(r) {
       r.addEventListener('change', function(e) { applyFont(e.target.value); });
     });
+  </script>
+
+  <script>
+    // ── Zen mode easter egg — triple-click the sun or moon ──
+    let _zc = 0, _zt: ReturnType<typeof setTimeout> | null = null;
+    function _zen() {
+      _zc++;
+      if (_zt) clearTimeout(_zt);
+      if (_zc >= 3) {
+        _zc = 0;
+        document.documentElement.classList.toggle('zen-mode');
+      } else {
+        _zt = setTimeout(() => { _zc = 0; }, 500);
+      }
+    }
+    document.getElementById('sun')?.addEventListener('click', _zen);
+    document.getElementById('moon')?.addEventListener('click', _zen);
   </script>
 
   <script>
