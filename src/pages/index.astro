@@ -882,10 +882,13 @@ const amenities = [
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data),
         });
-        const json = await res.json();
+
+        // Parse JSON safely — server might return HTML on unexpected errors
+        let json: Record<string, unknown> = {};
+        try { json = await res.json(); } catch { /* not JSON */ }
 
         if (!res.ok || json.error) {
-          errorEl.textContent = json.error || 'Something went wrong. Please try again.';
+          errorEl.textContent = (json.error as string) || `Error ${res.status}. Please email us at madawaskarivercottages@gmail.com`;
           errorEl.style.display = 'block';
           submitBtn.textContent = 'Send Enquiry';
           submitBtn.disabled = false;
@@ -893,8 +896,8 @@ const amenities = [
           form.style.display = 'none';
           successEl.style.display = 'block';
         }
-      } catch {
-        errorEl.textContent = 'Network error. Please check your connection and try again.';
+      } catch (err) {
+        errorEl.textContent = `Could not reach the server. Please email us at madawaskarivercottages@gmail.com`;
         errorEl.style.display = 'block';
         submitBtn.textContent = 'Send Enquiry';
         submitBtn.disabled = false;
