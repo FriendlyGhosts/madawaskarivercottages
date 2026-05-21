@@ -72,7 +72,7 @@ export async function POST({ request }: { request: Request }) {
       body: JSON.stringify({
         from: 'Madawaska River Cottages <noreply@madawaskarivercottages.ca>',
         to: ['madawaskarivercottages@gmail.com'],
-        reply_to: email,
+        reply_to: [email],
         subject: `Enquiry from ${firstName} ${lastName || ''}${cabin ? ` — ${cabin}` : ''}`,
         html,
       }),
