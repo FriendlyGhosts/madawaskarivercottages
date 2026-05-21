@@ -20,9 +20,11 @@ export async function POST({ request }: { request: Request }) {
     }
 
     // Try import.meta.env first (Astro), fall back to process.env (Node/Vercel)
-    const apiKey =
+    // Strip BOM (﻿) that PowerShell sometimes injects when piping values
+    const rawKey =
       (import.meta.env.RESEND_API_KEY as string | undefined) ||
-      (typeof process !== 'undefined' ? process.env.RESEND_API_KEY : undefined);
+      (typeof process !== 'undefined' ? process.env.RESEND_API_KEY : undefined) || '';
+    const apiKey = rawKey.replace(/^﻿/, '').trim();
 
     if (!apiKey) {
       return json({ error: 'Server configuration error (missing API key).' }, 500);
