@@ -437,6 +437,54 @@ const calYear = calMonths[0].year;
     /* ── Misc ────────────────────────────────────────────── */
     .divider { width: 48px; height: 1px; background: var(--color-accent); }
     .feature-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--color-accent); flex-shrink: 0; margin-top: 7px; }
+
+    /* ── Enquiry button & form ───────────────────────────── */
+    #enquire-btn-wrap {
+      overflow: hidden;
+      max-height: 0;
+      transition: max-height 0.4s ease;
+    }
+    #enquire-btn {
+      width: 100%; margin-top: 16px;
+      padding: 14px 20px;
+      background: var(--color-accent); color: var(--color-bg);
+      font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase;
+      border: none; cursor: pointer;
+      transition: opacity 0.2s;
+      display: block;
+    }
+    #enquire-btn:hover { opacity: 0.85; }
+    #enquiry-section {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.7s ease;
+    }
+    #enq-form input, #enq-form textarea {
+      width: 100%;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      color: var(--color-text);
+      font-size: 13px;
+      padding: 10px 12px;
+      outline: none;
+      transition: border-color 0.2s;
+      font-family: 'Inter', sans-serif;
+    }
+    #enq-form input:focus, #enq-form textarea:focus {
+      border-color: var(--color-accent);
+    }
+    #enq-label {
+      font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase;
+      color: var(--color-muted); display: block; margin-bottom: 6px;
+    }
+    #enq-submit {
+      width: 100%; padding: 16px 20px;
+      background: var(--color-accent); color: var(--color-bg);
+      font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase;
+      border: none; cursor: pointer; transition: opacity 0.2s; display: block;
+    }
+    #enq-submit:hover { opacity: 0.85; }
+    #enq-submit:disabled { opacity: 0.5; cursor: not-allowed; }
   </style>
 
   <!-- ── NAV ────────────────────────────────────────────────────────────────── -->
@@ -583,6 +631,10 @@ const calYear = calMonths[0].year;
             : 'Minimum 1-week stay · Rates exclude taxes · 50% deposit to confirm'
           }
         </p>
+        <!-- "Request These Dates" button — slides up when both dates are chosen -->
+        <div id="enquire-btn-wrap">
+          <button id="enquire-btn" data-hover>Request These Dates →</button>
+        </div>
       </div>
 
       <!-- 6-month calendar -->
@@ -616,6 +668,50 @@ const calYear = calMonths[0].year;
         <span class="cal-legend-item">
           <span class="cal-legend-dot" style="background:var(--color-accent);opacity:0.6"></span>Selected
         </span>
+      </div>
+
+      <!-- ── INLINE ENQUIRY FORM — revealed by "Request These Dates" ─────────── -->
+      <div id="enquiry-section">
+        <div style="padding-top:48px;">
+          <div class="divider" style="margin-bottom:32px;"></div>
+          <p class="text-xs tracking-[0.3em] uppercase mb-2" style="color:var(--color-accent)">Send an Enquiry</p>
+          <h2 class="text-3xl md:text-4xl font-light mb-10" style="font-family:'Cormorant',serif">Request These Dates</h2>
+
+          <!-- Success state -->
+          <div id="enq-success" style="display:none; padding:28px; background:rgba(46,107,138,0.07); border:1px solid var(--color-border); text-align:center; margin-bottom:24px;">
+            <p style="font-size:13px; color:var(--color-accent); letter-spacing:0.06em; line-height:1.8;" id="enq-success-msg"></p>
+          </div>
+
+          <!-- Error state -->
+          <div id="enq-error" style="display:none; padding:14px 16px; background:rgba(180,50,50,0.06); border:1px solid rgba(180,50,50,0.22); margin-bottom:20px;">
+            <p style="font-size:12px; color:#b83232; letter-spacing:0.04em;" id="enq-error-msg"></p>
+          </div>
+
+          <form id="enq-form" novalidate>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+              <div>
+                <label style="font-size:10px; letter-spacing:0.15em; text-transform:uppercase; color:var(--color-muted); display:block; margin-bottom:6px;">First name *</label>
+                <input type="text" name="firstName" autocomplete="given-name" required />
+              </div>
+              <div>
+                <label style="font-size:10px; letter-spacing:0.15em; text-transform:uppercase; color:var(--color-muted); display:block; margin-bottom:6px;">Last name</label>
+                <input type="text" name="lastName" autocomplete="family-name" />
+              </div>
+            </div>
+            <div class="mb-4">
+              <label style="font-size:10px; letter-spacing:0.15em; text-transform:uppercase; color:var(--color-muted); display:block; margin-bottom:6px;">Email address *</label>
+              <input type="email" name="email" autocomplete="email" required />
+            </div>
+            <div class="mb-6">
+              <label style="font-size:10px; letter-spacing:0.15em; text-transform:uppercase; color:var(--color-muted); display:block; margin-bottom:6px;">Message *</label>
+              <textarea name="message" rows="6" id="enq-message" required></textarea>
+            </div>
+            <button type="submit" id="enq-submit" data-hover>Send Enquiry</button>
+            <p style="font-size:10px; color:var(--color-muted); letter-spacing:0.06em; margin-top:12px; text-align:center;">
+              We typically reply within 24 hours.
+            </p>
+          </form>
+        </div>
       </div>
     </div>
 
@@ -660,7 +756,7 @@ const calYear = calMonths[0].year;
   </div>
 
   <!-- ── Data injection for client JS ─────────────────────────────────────── -->
-  <script id="page-data" type="application/json" set:html={JSON.stringify({ bookedDates, rate, pets, photos })}></script>
+  <script id="page-data" type="application/json" set:html={JSON.stringify({ bookedDates, rate, pets, photos, name })}></script>
 
   <script>
     // ── Load data ─────────────────────────────────────────────────────────────
@@ -865,6 +961,7 @@ const calYear = calMonths[0].year;
       selEnd   = end;
       paintHighlights(start, end);
       updateCalc(start, end);
+      updateEnquireBtn(start, end);
     }
 
     // ── Wire up calendar days (mouse / desktop only) ─────────────────────────
@@ -1000,6 +1097,112 @@ const calYear = calMonths[0].year;
     const now = new Date();
     const todayDs = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
     document.querySelector(`[data-date="${todayDs}"]`)?.classList.add('cal-today');
+
+    // ── Booking enquiry flow ──────────────────────────────────────────────────
+    const COTTAGE_NAME: string = _raw.name;
+
+    const enquireBtnWrap  = document.getElementById('enquire-btn-wrap')!;
+    const enquireBtn      = document.getElementById('enquire-btn')!;
+    const enquirySection  = document.getElementById('enquiry-section')!;
+    const enqForm         = document.getElementById('enq-form') as HTMLFormElement;
+    const enqMessageEl    = document.getElementById('enq-message') as HTMLTextAreaElement;
+    const enqSuccess      = document.getElementById('enq-success')!;
+    const enqSuccessMsg   = document.getElementById('enq-success-msg')!;
+    const enqError        = document.getElementById('enq-error')!;
+    const enqErrorMsg     = document.getElementById('enq-error-msg')!;
+    const enqSubmit       = document.getElementById('enq-submit') as HTMLButtonElement;
+
+    function buildEnquiryMessage(start: string, end: string): string {
+      const nights   = nightsBetween(start, end);
+      const petTotal = petCount * PET_FEE;
+      const grand    = nights * RATE + petTotal;
+      let msg = `Hi,\n\nI'd like to enquire about booking ${COTTAGE_NAME} from ${fmtDate(start)} to ${fmtDate(end)} (${nights} night${nights !== 1 ? 's' : ''}).\n\nEstimated total: $${grand.toLocaleString()} + taxes.`;
+      if (petCount > 0) {
+        msg += `\n\nWe'll be bringing ${petCount} pet${petCount > 1 ? 's' : ''} ($${petTotal} pet fee included).`;
+      }
+      msg += '\n\nPlease let me know if these dates are available and how to proceed with the booking.\n\nThank you!';
+      return msg;
+    }
+
+    function updateEnquireBtn(start: string | null, end: string | null) {
+      const hasRange = !!(start && end && start !== end);
+      // Slide button in/out
+      enquireBtnWrap.style.maxHeight = hasRange ? '80px' : '0';
+
+      if (!hasRange) {
+        // Collapse the form if dates cleared
+        enquirySection.style.maxHeight = '0';
+      } else if (enquirySection.style.maxHeight && enquirySection.style.maxHeight !== '0px') {
+        // Form already open — refresh the pre-filled message live
+        enqMessageEl.value = buildEnquiryMessage(start!, end!);
+      }
+    }
+
+    enquireBtn.addEventListener('click', () => {
+      if (!selStart || !selEnd) return;
+      // Reset form to clean state each time it's opened fresh
+      enqSuccess.style.display = 'none';
+      enqError.style.display   = 'none';
+      enqForm.style.display    = '';
+      enqSubmit.disabled       = false;
+      enqSubmit.textContent    = 'Send Enquiry';
+      // Pre-fill message
+      enqMessageEl.value = buildEnquiryMessage(selStart, selEnd);
+      // Reveal section
+      enquirySection.style.maxHeight = '1400px';
+      setTimeout(() => {
+        enquirySection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 80);
+    });
+
+    enqForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd   = new FormData(enqForm);
+      const data = {
+        firstName: (fd.get('firstName') as string)?.trim() ?? '',
+        lastName:  (fd.get('lastName')  as string)?.trim() ?? '',
+        email:     (fd.get('email')     as string)?.trim() ?? '',
+        cabin:     COTTAGE_NAME,
+        message:   (fd.get('message')   as string)?.trim() ?? '',
+      };
+
+      enqError.style.display = 'none';
+
+      if (!data.firstName || !data.email || !data.message) {
+        enqErrorMsg.textContent = 'Please fill in all required fields.';
+        enqError.style.display  = 'block';
+        return;
+      }
+
+      enqSubmit.disabled     = true;
+      enqSubmit.textContent  = 'Sending…';
+
+      try {
+        const res = await fetch('/api/contact', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+        let json: Record<string, unknown> = {};
+        try { json = await res.json(); } catch { /* non-JSON body */ }
+
+        if (!res.ok || json.error) {
+          enqErrorMsg.textContent = (json.error as string) || 'Something went wrong — please try again.';
+          enqError.style.display  = 'block';
+          enqSubmit.disabled      = false;
+          enqSubmit.textContent   = 'Send Enquiry';
+        } else {
+          enqForm.style.display   = 'none';
+          enqSuccessMsg.textContent = `We'll confirm ${COTTAGE_NAME} for ${fmtDate(selStart!)} – ${fmtDate(selEnd!)} shortly. Check your inbox for our reply.`;
+          enqSuccess.style.display  = 'block';
+        }
+      } catch {
+        enqErrorMsg.textContent = 'Network error — please check your connection and try again.';
+        enqError.style.display  = 'block';
+        enqSubmit.disabled      = false;
+        enqSubmit.textContent   = 'Send Enquiry';
+      }
+    });
   </script>
 
 </Layout>
