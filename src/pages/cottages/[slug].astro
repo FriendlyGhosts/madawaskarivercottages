@@ -440,18 +440,23 @@ const calYear = calMonths[0].year;
 
     /* ── Enquiry button & form ───────────────────────────── */
     #enquire-btn-wrap {
-      overflow: hidden;
-      max-height: 0;
-      transition: max-height 0.4s ease;
+      margin-top: 16px;
     }
     #enquire-btn {
-      width: 100%; margin-top: 16px;
+      width: 100%;
       padding: 14px 20px;
       background: var(--color-accent); color: var(--color-bg);
       font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase;
       border: none; cursor: pointer;
-      transition: opacity 0.2s;
       display: block;
+      /* Hidden by default — opacity keeps space reserved so calc panel never grows */
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.35s ease;
+    }
+    #enquire-btn.enq-visible {
+      opacity: 1;
+      pointer-events: auto;
     }
     #enquire-btn:hover { opacity: 0.85; }
     #enquiry-section {
@@ -1012,6 +1017,7 @@ const calYear = calMonths[0].year;
           if (endEl?.dataset.date && endEl.dataset.date !== selStart) {
             selEnd = endEl.dataset.date;
             updateCalc(selStart, selEnd);
+            updateEnquireBtn(selStart, selEnd);
           }
         }
       });
@@ -1126,11 +1132,11 @@ const calYear = calMonths[0].year;
 
     function updateEnquireBtn(start: string | null, end: string | null) {
       const hasRange = !!(start && end && start !== end);
-      // Slide button in/out
-      enquireBtnWrap.style.maxHeight = hasRange ? '80px' : '0';
+      // Fade button in/out — space always reserved so calc panel never shifts
+      enquireBtn.classList.toggle('enq-visible', hasRange);
 
       if (!hasRange) {
-        // Collapse the form if dates cleared
+        // Collapse the form if dates are cleared
         enquirySection.style.maxHeight = '0';
       } else if (enquirySection.style.maxHeight && enquirySection.style.maxHeight !== '0px') {
         // Form already open — refresh the pre-filled message live
