@@ -546,7 +546,7 @@ const calYear = calMonths[0].year;
       <p class="text-xs tracking-[0.3em] uppercase mb-3" style="color: var(--color-accent)">
         {isTreehouse ? 'Something Different · Griffith, Ontario' : `${number} Harrison Trail · Griffith, Ontario`}
       </p>
-      <h1 class="text-5xl md:text-7xl font-light mb-3" style="font-family: 'Cormorant', serif">{name}</h1>
+      <h1 class="text-5xl md:text-6xl lg:text-7xl font-light mb-3" style="font-family: 'Cormorant', serif">{name}</h1>
       <p class="text-xs tracking-[0.22em] uppercase mb-8" style="color: var(--color-accent)">{tagline}</p>
       <div class="divider mb-8"></div>
       <div class="flex flex-wrap gap-x-10 gap-y-3 text-sm mb-8" style="color: var(--color-muted)">
@@ -969,64 +969,64 @@ const calYear = calMonths[0].year;
       updateEnquireBtn(start, end);
     }
 
-    // ── Wire up calendar days (mouse / desktop only) ─────────────────────────
-    const IS_TOUCH = navigator.maxTouchPoints > 0;
-    const calDays  = Array.from(document.querySelectorAll<HTMLElement>('.cal-day'));
+    // ── Wire up calendar days — mouse (desktop + tablet trackpad/stylus) ──────
+    const calDays = Array.from(document.querySelectorAll<HTMLElement>('.cal-day'));
 
-    if (!IS_TOUCH) {
-      calDays.forEach(el => {
-        const ds      = el.dataset.date!;
-        const blocked = el.classList.contains('cal-booked') || el.classList.contains('cal-past');
+    calDays.forEach(el => {
+      const ds      = el.dataset.date!;
+      const blocked = el.classList.contains('cal-booked') || el.classList.contains('cal-past');
 
-        el.addEventListener('mousedown', ev => {
-          if (blocked) return;
-          ev.preventDefault();
-          dragging = true;
+      el.addEventListener('mousedown', ev => {
+        // Ignore if this is a touch-synthesised mouse event
+        if ((ev as MouseEvent & { sourceCapabilities?: { firesTouchEvents: boolean } }).sourceCapabilities?.firesTouchEvents) return;
+        if (blocked) return;
+        ev.preventDefault();
+        dragging = true;
 
-          if (!selStart) {
-            setSelection(ds, null);
-          } else if (selEnd) {
+        if (!selStart) {
+          setSelection(ds, null);
+        } else if (selEnd) {
+          setSelection(ds, null);
+        } else {
+          if (ds === selStart) { setSelection(null, null); }
+          else if (hasBlockedInside(selStart, ds)) {
             setSelection(ds, null);
           } else {
-            if (ds === selStart) { setSelection(null, null); }
-            else if (hasBlockedInside(selStart, ds)) {
-              setSelection(ds, null);
-            } else {
-              const s = selStart <= ds ? selStart : ds;
-              const e = selStart <= ds ? ds : selStart;
-              setSelection(s, e);
-              dragging = false;
-            }
-          }
-        });
-
-        el.addEventListener('mouseenter', () => {
-          if (!dragging || !selStart || selEnd) return;
-          if (blocked) return;
-          if (hasBlockedInside(selStart, ds)) return;
-          paintHighlights(selStart, ds);
-          updateCalc(selStart, ds);
-        });
-      });
-
-      document.addEventListener('mouseup', () => {
-        if (!dragging) return;
-        dragging = false;
-        if (selStart) {
-          const endEl = document.querySelector<HTMLElement>('.cal-day.sel-end:not(.sel-start)');
-          if (endEl?.dataset.date && endEl.dataset.date !== selStart) {
-            selEnd = endEl.dataset.date;
-            updateCalc(selStart, selEnd);
-            updateEnquireBtn(selStart, selEnd);
+            const s = selStart <= ds ? selStart : ds;
+            const e = selStart <= ds ? ds : selStart;
+            setSelection(s, e);
+            dragging = false;
           }
         }
       });
-    }
 
-    // ── Touch calendar — two-tap selection ────────────────────────────────────
-    // Selection lives in touchend (not touchstart) so we can call preventDefault()
-    // to stop the browser from also firing synthetic mousedown/mouseup/click events.
-    // touchstart stays passive so normal page scrolling is never blocked.
+      el.addEventListener('mouseenter', () => {
+        if (!dragging || !selStart || selEnd) return;
+        if (blocked) return;
+        if (hasBlockedInside(selStart, ds)) return;
+        paintHighlights(selStart, ds);
+        updateCalc(selStart, ds);
+      });
+    });
+
+    document.addEventListener('mouseup', ev => {
+      if ((ev as MouseEvent & { sourceCapabilities?: { firesTouchEvents: boolean } }).sourceCapabilities?.firesTouchEvents) return;
+      if (!dragging) return;
+      dragging = false;
+      if (selStart) {
+        const endEl = document.querySelector<HTMLElement>('.cal-day.sel-end:not(.sel-start)');
+        if (endEl?.dataset.date && endEl.dataset.date !== selStart) {
+          selEnd = endEl.dataset.date;
+          updateCalc(selStart, selEnd);
+          updateEnquireBtn(selStart, selEnd);
+        }
+      }
+    });
+
+    // ── Touch calendar — two-tap selection (phones + tablets using touch) ─────
+    // touchend fires preventDefault() to stop the browser synthesising mouse
+    // events after a tap, so there is no double-firing with the mouse handlers.
+    // touchstart is passive so normal page scrolling is never blocked.
     const calGrid = document.getElementById('cal-grid')!;
 
     function dayElAtPoint(x: number, y: number): HTMLElement | null {
@@ -1034,50 +1034,48 @@ const calYear = calMonths[0].year;
       return el?.classList.contains('cal-day') ? el : null;
     }
 
-    if (IS_TOUCH) {
-      // Track touchstart position so we can ignore scroll gestures
-      let tStartX = 0, tStartY = 0;
-      calGrid.addEventListener('touchstart', ev => {
-        tStartX = ev.touches[0].clientX;
-        tStartY = ev.touches[0].clientY;
-      }, { passive: true });
+    // Track touchstart position so we can ignore scroll gestures
+    let tStartX = 0, tStartY = 0;
+    calGrid.addEventListener('touchstart', ev => {
+      tStartX = ev.touches[0].clientX;
+      tStartY = ev.touches[0].clientY;
+    }, { passive: true });
 
-      calGrid.addEventListener('touchend', ev => {
-        const t  = ev.changedTouches[0];
-        const dx = Math.abs(t.clientX - tStartX);
-        const dy = Math.abs(t.clientY - tStartY);
+    calGrid.addEventListener('touchend', ev => {
+      const t  = ev.changedTouches[0];
+      const dx = Math.abs(t.clientX - tStartX);
+      const dy = Math.abs(t.clientY - tStartY);
 
-        // Ignore if finger moved more than 10px — user was scrolling, not tapping
-        if (dx > 10 || dy > 10) return;
+      // Ignore if finger moved more than 10px — user was scrolling, not tapping
+      if (dx > 10 || dy > 10) return;
 
-        // Prevent the browser from synthesising mousedown / click after this touch
-        ev.preventDefault();
+      // Prevent the browser from synthesising mousedown / click after this touch
+      ev.preventDefault();
 
-        const day = dayElAtPoint(t.clientX, t.clientY);
-        if (!day) return;
-        const ds      = day.dataset.date!;
-        const blocked = day.classList.contains('cal-booked') || day.classList.contains('cal-past');
-        if (blocked) return;
+      const day = dayElAtPoint(t.clientX, t.clientY);
+      if (!day) return;
+      const ds      = day.dataset.date!;
+      const blocked = day.classList.contains('cal-booked') || day.classList.contains('cal-past');
+      if (blocked) return;
 
-        if (!selStart) {
-          setSelection(ds, null);
-        } else if (selEnd) {
-          // Range already set — restart from this tap
+      if (!selStart) {
+        setSelection(ds, null);
+      } else if (selEnd) {
+        // Range already set — restart from this tap
+        setSelection(ds, null);
+      } else {
+        if (ds === selStart) {
+          setSelection(null, null);
+        } else if (hasBlockedInside(selStart, ds)) {
+          // Can't straddle a booked date — restart
           setSelection(ds, null);
         } else {
-          if (ds === selStart) {
-            setSelection(null, null);
-          } else if (hasBlockedInside(selStart, ds)) {
-            // Can't straddle a booked date — restart
-            setSelection(ds, null);
-          } else {
-            const s = selStart <= ds ? selStart : ds;
-            const e = selStart <= ds ? ds : selStart;
-            setSelection(s, e);
-          }
+          const s = selStart <= ds ? selStart : ds;
+          const e = selStart <= ds ? ds : selStart;
+          setSelection(s, e);
         }
-      }, { passive: false }); // passive:false required for preventDefault()
-    }
+      }
+    }, { passive: false }); // passive:false required for preventDefault()
 
     // Clear button
     document.getElementById('calc-clear')!.addEventListener('click', () => setSelection(null, null));
