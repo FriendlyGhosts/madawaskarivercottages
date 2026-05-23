@@ -628,8 +628,9 @@ const amenities = [
     // ── Explosion state machine ───────────────────────────────────────────────
     var EX_PHASE     = 0;   // 0=idle  1=compress  2=explode
     var EX_T         = 0;
-    var COMPRESS_DUR = 165; // slow pressure build — ~2.7s at 60fps
-    var EXPLODE_DUR  = 88;
+    var COMPRESS_DUR  = 230; // slow pressure build — ~3.8s at 60fps
+    var VIBRATE_START = 190; // last ~40 frames (~0.65s) — rings shudder before burst
+    var EXPLODE_DUR   = 88;
 
     // Dense inner pressure rings: [startR, targetR, peakAlpha, lineWidth]
     var INNER = [
@@ -725,10 +726,15 @@ const amenities = [
       // ── Phase 1: compress — inner rings press outer rings outward ────────────
       } else if (EX_PHASE === 1) {
         var prog  = EX_T / COMPRESS_DUR;
-        var ease  = prog * prog * prog; // cubic ease — pressure crawls then surges
-        var push  = 28 * ease;
+        var ease  = prog * prog * prog; // cubic — pressure crawls, then surges
+        var push  = 30 * ease;
 
-        // Outer rings displaced outward and brightened
+        // Vibration ramps up in the final stretch — pressure-cooker shudder
+        var vProg  = EX_T >= VIBRATE_START ? (EX_T - VIBRATE_START) / (COMPRESS_DUR - VIBRATE_START) : 0;
+        var vibAmp = vProg * 13;                    // grows 0→13px
+        var vibHz  = 0.28 + vProg * 1.80;           // frequency ramps up
+
+        // Outer rings displaced outward, brightened, and shuddering
         var bDA = [0.72, 0.50, 0.34], bNA = [0.58, 0.38, 0.24], bW = [2.8, 2.0, 1.4];
         rings.forEach(function(ring, ri) {
           ring.R = BASE_R[ri] + push * (1 + ri * 0.14);
@@ -737,23 +743,25 @@ const amenities = [
           var first2 = true;
           for (var i = 0; i <= NSR; i++) {
             var theta = (i / NSR) * 2 * Math.PI;
-            var r = ringWaveR(ring, theta, srT) + bowDeformR(bow, theta, srT);
+            var vib = vibAmp * Math.sin(srT * vibHz + ri * 1.3); // per-ring phase offset
+            var r = ringWaveR(ring, theta, srT) + bowDeformR(bow, theta, srT) + vib;
             var x = CS2 + r * Math.cos(theta), y = CS2 + r * Math.sin(theta);
             if (first2) { srCtx.moveTo(x, y); first2 = false; } else srCtx.lineTo(x, y);
           }
           srCtx.closePath();
           var baseA = isNight ? bNA[ri] : bDA[ri];
-          var a = baseA + prog * 0.28;
+          var a = baseA + prog * 0.28 + vProg * 0.22; // extra flash near burst
           srCtx.strokeStyle = isNight ? 'rgba(255,240,160,' + a + ')' : 'rgba(255,215,80,' + a + ')';
-          srCtx.lineWidth   = bW[ri] * (1 + prog * 0.45);
+          srCtx.lineWidth   = bW[ri] * (1 + prog * 0.45 + vProg * 0.30);
           srCtx.stroke();
         });
 
-        // Inner pressure rings growing outward from the core
+        // Inner pressure rings — grow faster, flash brighter as vibration peaks
         INNER.forEach(function(ir) {
           var curR = ir[0] + (ir[1] - ir[0]) * prog;
-          var a    = ir[2] * (0.25 + 0.75 * prog);
-          plainCircle(curR, isNight ? 'rgba(255,245,155,' + a + ')' : 'rgba(255,220,75,' + a + ')', ir[3]);
+          var a    = ir[2] * (0.20 + 0.80 * prog + vProg * 0.40);
+          var w    = ir[3] * (1 + vProg * 0.90);
+          plainCircle(curR, isNight ? 'rgba(255,245,155,' + a + ')' : 'rgba(255,220,75,' + a + ')', w);
         });
 
         EX_T++;
@@ -795,25 +803,31 @@ const amenities = [
     }
 
     // ── Aurora state (Gerstner waves, interactive, persists during zen mode) ──
-    var skyEl = null, aCanvas = null, aAF = null, auroraActive = false;
+    var skyEl = null, darkEl = null, aCanvas = null, aAF = null, auroraActive = false;
     var aW = 0, aH = 0, aT = 0;
 
     // 5 aurora layers — each has a unique fill colour, Gerstner components, and bowstring state
     // comps: [amplitude, wavenumber-k, speed, phase-offset]
     // fill: drawn bottom-to-top so each band peeks out between the wave lines above it
     var aLayers = [
-      {yFrac:0.13, fill:'rgba(50,230,95,0.46)',   comps:[[18,1.8,0.006,0.0],[9,2.9,0.004,1.1],[5,4.1,0.003,2.3]], engaged:false, engX:0, pullAmt:0, pulses:[]},
-      {yFrac:0.26, fill:'rgba(155,65,255,0.40)',  comps:[[15,2.1,0.007,0.7],[8,3.4,0.005,1.8],[4,5.0,0.003,0.4]], engaged:false, engX:0, pullAmt:0, pulses:[]},
-      {yFrac:0.38, fill:'rgba(25,205,215,0.44)',  comps:[[20,1.6,0.005,1.5],[10,2.7,0.004,2.2],[6,4.3,0.003,0.9]], engaged:false, engX:0, pullAmt:0, pulses:[]},
-      {yFrac:0.49, fill:'rgba(235,65,175,0.37)',  comps:[[12,2.3,0.008,2.0],[6,3.8,0.005,0.3],[4,5.5,0.003,1.4]], engaged:false, engX:0, pullAmt:0, pulses:[]},
-      {yFrac:0.59, fill:'rgba(70,115,250,0.42)',  comps:[[17,1.9,0.006,0.8],[8,3.1,0.004,1.6],[5,4.7,0.003,2.7]], engaged:false, engX:0, pullAmt:0, pulses:[]},
+      {yFrac:0.22, fill:'rgba(40,220,90,0.58)',   comps:[[18,1.8,0.006,0.0],[9,2.9,0.004,1.1],[5,4.1,0.003,2.3]], engaged:false, engX:0, pullAmt:0, pulses:[]},
+      {yFrac:0.33, fill:'rgba(145,55,250,0.52)',  comps:[[15,2.1,0.007,0.7],[8,3.4,0.005,1.8],[4,5.0,0.003,0.4]], engaged:false, engX:0, pullAmt:0, pulses:[]},
+      {yFrac:0.44, fill:'rgba(18,198,218,0.56)',  comps:[[20,1.6,0.005,1.5],[10,2.7,0.004,2.2],[6,4.3,0.003,0.9]], engaged:false, engX:0, pullAmt:0, pulses:[]},
+      {yFrac:0.55, fill:'rgba(228,55,165,0.50)',  comps:[[12,2.3,0.008,2.0],[6,3.8,0.005,0.3],[4,5.5,0.003,1.4]], engaged:false, engX:0, pullAmt:0, pulses:[]},
+      {yFrac:0.65, fill:'rgba(58,100,245,0.54)',  comps:[[17,1.9,0.006,0.8],[8,3.1,0.004,1.6],[5,4.7,0.003,2.7]], engaged:false, engX:0, pullAmt:0, pulses:[]},
     ];
     var A_ENGAGE_DIST = 28, A_SNAP_DIST = 65;
     var A_PULL_SCALE  = 0.35, A_PULSE_SPEED = 3.5, A_PULSE_DECAY = 0.008;
-    var A_TILT = 0.38; // right-edge drops this fraction of canvas height vs left-edge
+    var A_TILT = 0.52; // total upward shift at right edge as fraction of canvas height
 
-    // Curved arch: nearly flat at left, steepens toward right — bands follow a natural arc
-    function aTiltY(x) { return aW > 0 ? -(Math.pow(x / aW, 1.65) * A_TILT * aH) : 0; }
+    // Curved arch matching the red-line annotation:
+    // flat for the first ~15% of width, then quadratic sweep up toward top-right
+    // bands naturally clip at y=0, so they fade out one by one before reaching the sun
+    function aTiltY(x) {
+      if (aW <= 0) return 0;
+      var t = Math.max(0, x / aW - 0.15) / 0.85; // 0→1 starting at 15% width
+      return -(t * t * A_TILT * aH);
+    }
 
     // Gerstner y for a layer at position x and time t
     function aLayerY(layer, x, t) {
@@ -922,9 +936,19 @@ const amenities = [
     function triggerSkyEffects(isNight) {
       // Tear down any remnants
       if (skyEl   && skyEl.parentNode)   { skyEl.parentNode.removeChild(skyEl);     skyEl   = null; }
+      if (darkEl  && darkEl.parentNode)  { darkEl.parentNode.removeChild(darkEl);   darkEl  = null; }
       if (aCanvas && aCanvas.parentNode) { aCanvas.parentNode.removeChild(aCanvas); aCanvas = null; }
       if (aAF) { cancelAnimationFrame(aAF); aAF = null; }
       auroraActive = false;
+
+      // Dark backdrop — lets screen-blend aurora glow rather than wash white on parchment
+      darkEl = document.createElement('div');
+      darkEl.style.cssText = [
+        'position:fixed', 'inset:0', 'z-index:38', 'pointer-events:none',
+        'background:rgba(4,8,28,0.52)', 'opacity:0', 'transition:opacity 1.6s ease',
+      ].join(';');
+      document.body.appendChild(darkEl);
+      requestAnimationFrame(function() { requestAnimationFrame(function() { darkEl.style.opacity = '1'; }); });
 
       // Solar flare flash — bright orange burst that fades back to normal sky
       skyEl = document.createElement('div');
@@ -980,6 +1004,12 @@ const amenities = [
         skyEl.style.opacity = '0';
         var _s = skyEl; skyEl = null;
         setTimeout(function() { _s.parentNode && _s.parentNode.removeChild(_s); }, 1500);
+      }
+      if (darkEl) {
+        darkEl.style.transition = 'opacity 1.4s ease';
+        darkEl.style.opacity = '0';
+        var _d = darkEl; darkEl = null;
+        setTimeout(function() { _d.parentNode && _d.parentNode.removeChild(_d); }, 1500);
       }
       if (aCanvas) {
         auroraActive = false;
