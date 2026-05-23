@@ -730,19 +730,6 @@ const amenities = [
         var ease  = prog * prog * prog; // cubic — pressure crawls, then surges
         var push  = 30 * ease;
 
-        // Sun colour: orange pressure build (first 50%), then supernova flash (last 50%)
-        // brightness never dips below 0.74 — deep orange, never gray or black
-        if (sunDisk) {
-          if (prog < 0.50) {
-            var dp = prog / 0.50;
-            var dpE = dp * dp * dp; // cubic — slow start, surges to match ring pressure
-            sunDisk.style.filter = 'brightness(' + (1 - dpE * 0.26) + ') sepia(' + (dpE * 0.95) + ') saturate(1.8)';
-          } else {
-            var bp = (prog - 0.50) / 0.50;
-            sunDisk.style.filter = 'brightness(' + (0.74 + bp * 4.26) + ') sepia(' + (0.95 * (1 - bp)) + ') saturate(' + (1.8 - bp * 0.8) + ')';
-          }
-        }
-
         // Vibration ramps up in the final stretch — pressure-cooker shudder
         var vProg  = EX_T >= VIBRATE_START ? (EX_T - VIBRATE_START) / (COMPRESS_DUR - VIBRATE_START) : 0;
         var vibAmp = vProg * 13;                    // grows 0→13px

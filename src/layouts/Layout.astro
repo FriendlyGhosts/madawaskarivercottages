@@ -261,10 +261,10 @@ const {
 
       // Expose wave ripple so solar explosion can disturb the river
       (window as any).triggerWaveRipple = () => {
-        const ox = wW * 0.68; // origin roughly center — shockwave spreads outward
+        const ox = wW * 0.84; // directly below the sun (top-right)
         bowStates.forEach((st, i) => {
-          // Downward press (positive = down) with wide bell — water pressed by sun force
-          st.pulses.push({ pullX: ox, releaseAmt: 72 + i * 12, releaseT: wT + i * 2, hw0: 450 });
+          // Downward press (positive = down) with very wide bell — water pressed by sun force
+          st.pulses.push({ pullX: ox, releaseAmt: 72 + i * 12, releaseT: wT + i * 2, hw0: 620 });
         });
       };
 
