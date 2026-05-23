@@ -816,7 +816,7 @@ const amenities = [
     }
 
     // ── Aurora state (Gerstner waves, interactive, persists during zen mode) ──
-    var skyEl = null, aCanvas = null, aAF = null, auroraActive = false;
+    var skyEl = null, aCanvas = null, aAF = null, auroraActive = false, tidalInterval = null;
     var aW = 0, aH = 0, aT = 0;
 
     // 5 aurora layers — each has a unique fill colour, Gerstner components, and bowstring state
@@ -979,6 +979,7 @@ const amenities = [
       if (skyEl   && skyEl.parentNode)   { skyEl.parentNode.removeChild(skyEl);     skyEl   = null; }
       if (aCanvas && aCanvas.parentNode) { aCanvas.parentNode.removeChild(aCanvas); aCanvas = null; }
       if (aAF) { cancelAnimationFrame(aAF); aAF = null; }
+      if (tidalInterval) { clearInterval(tidalInterval); tidalInterval = null; }
       auroraActive = false;
 
 
@@ -1029,6 +1030,12 @@ const amenities = [
         aCanvas.style.opacity = '1';
         drawAurora();
       }); });
+
+      // Tidal wave every 15 s while zen mode is active
+      if (tidalInterval) clearInterval(tidalInterval);
+      tidalInterval = setInterval(function() {
+        if (typeof window.triggerTidalWave === 'function') window.triggerTidalWave();
+      }, 15000);
     }
 
     // ── Clear effects — called when zen mode is exited ────────────────────────
@@ -1039,6 +1046,7 @@ const amenities = [
         var _s = skyEl; skyEl = null;
         setTimeout(function() { _s.parentNode && _s.parentNode.removeChild(_s); }, 1500);
       }
+      if (tidalInterval) { clearInterval(tidalInterval); tidalInterval = null; }
       if (aCanvas) {
         auroraActive = false;
         if (aAF) { cancelAnimationFrame(aAF); aAF = null; }

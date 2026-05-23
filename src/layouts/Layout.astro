@@ -272,6 +272,16 @@ const {
         });
       };
 
+      // Periodic tidal wave — large swell that sweeps across the river in alternating directions
+      let tidalDir = 1;
+      (window as any).triggerTidalWave = () => {
+        const ox = tidalDir > 0 ? -300 : wW + 300; // start off-screen left or right
+        tidalDir = -tidalDir;
+        bowStates.forEach((st, i) => {
+          st.pulses.push({ pullX: ox, releaseAmt: -(150 + i * 22), releaseT: wT + i * 4, hw0: 300, riseT: 22 });
+        });
+      };
+
       // Hide nav on scroll down, reveal on scroll up
       const navEl = document.querySelector('nav') as HTMLElement;
       let lastScrollY = 0;
