@@ -628,7 +628,7 @@ const amenities = [
     // ── Explosion state machine ───────────────────────────────────────────────
     var EX_PHASE     = 0;   // 0=idle  1=compress  2=explode
     var EX_T         = 0;
-    var COMPRESS_DUR = 82;
+    var COMPRESS_DUR = 165; // slow pressure build — ~2.7s at 60fps
     var EXPLODE_DUR  = 88;
 
     // Dense inner pressure rings: [startR, targetR, peakAlpha, lineWidth]
@@ -725,8 +725,8 @@ const amenities = [
       // ── Phase 1: compress — inner rings press outer rings outward ────────────
       } else if (EX_PHASE === 1) {
         var prog  = EX_T / COMPRESS_DUR;
-        var ease  = prog * prog;
-        var push  = 24 * ease;
+        var ease  = prog * prog * prog; // cubic ease — pressure crawls then surges
+        var push  = 28 * ease;
 
         // Outer rings displaced outward and brightened
         var bDA = [0.72, 0.50, 0.34], bNA = [0.58, 0.38, 0.24], bW = [2.8, 2.0, 1.4];
@@ -802,18 +802,18 @@ const amenities = [
     // comps: [amplitude, wavenumber-k, speed, phase-offset]
     // fill: drawn bottom-to-top so each band peeks out between the wave lines above it
     var aLayers = [
-      {yFrac:0.13, fill:'rgba(40,255,100,0.74)',  comps:[[18,1.8,0.006,0.0],[9,2.9,0.004,1.1],[5,4.1,0.003,2.3]], engaged:false, engX:0, pullAmt:0, pulses:[]},
-      {yFrac:0.26, fill:'rgba(155,50,255,0.70)',  comps:[[15,2.1,0.007,0.7],[8,3.4,0.005,1.8],[4,5.0,0.003,0.4]], engaged:false, engX:0, pullAmt:0, pulses:[]},
-      {yFrac:0.38, fill:'rgba(0,220,200,0.72)',   comps:[[20,1.6,0.005,1.5],[10,2.7,0.004,2.2],[6,4.3,0.003,0.9]], engaged:false, engX:0, pullAmt:0, pulses:[]},
-      {yFrac:0.49, fill:'rgba(255,55,175,0.68)',  comps:[[12,2.3,0.008,2.0],[6,3.8,0.005,0.3],[4,5.5,0.003,1.4]], engaged:false, engX:0, pullAmt:0, pulses:[]},
-      {yFrac:0.59, fill:'rgba(30,110,255,0.72)',  comps:[[17,1.9,0.006,0.8],[8,3.1,0.004,1.6],[5,4.7,0.003,2.7]], engaged:false, engX:0, pullAmt:0, pulses:[]},
+      {yFrac:0.13, fill:'rgba(8,180,55,0.88)',    comps:[[18,1.8,0.006,0.0],[9,2.9,0.004,1.1],[5,4.1,0.003,2.3]], engaged:false, engX:0, pullAmt:0, pulses:[]},
+      {yFrac:0.26, fill:'rgba(108,8,230,0.85)',   comps:[[15,2.1,0.007,0.7],[8,3.4,0.005,1.8],[4,5.0,0.003,0.4]], engaged:false, engX:0, pullAmt:0, pulses:[]},
+      {yFrac:0.38, fill:'rgba(0,168,200,0.88)',   comps:[[20,1.6,0.005,1.5],[10,2.7,0.004,2.2],[6,4.3,0.003,0.9]], engaged:false, engX:0, pullAmt:0, pulses:[]},
+      {yFrac:0.49, fill:'rgba(220,8,145,0.84)',   comps:[[12,2.3,0.008,2.0],[6,3.8,0.005,0.3],[4,5.5,0.003,1.4]], engaged:false, engX:0, pullAmt:0, pulses:[]},
+      {yFrac:0.59, fill:'rgba(8,48,210,0.88)',    comps:[[17,1.9,0.006,0.8],[8,3.1,0.004,1.6],[5,4.7,0.003,2.7]], engaged:false, engX:0, pullAmt:0, pulses:[]},
     ];
     var A_ENGAGE_DIST = 28, A_SNAP_DIST = 65;
     var A_PULL_SCALE  = 0.35, A_PULSE_SPEED = 3.5, A_PULSE_DECAY = 0.008;
     var A_TILT = 0.38; // right-edge drops this fraction of canvas height vs left-edge
 
-    // Diagonal tilt: waves slope down left→right, concentrating at top-left corner
-    function aTiltY(x) { return aW > 0 ? (x / aW) * A_TILT * aH : 0; }
+    // Diagonal tilt: waves slope UP left→right — bands bunch at top-left, angle into upper-right
+    function aTiltY(x) { return aW > 0 ? -(x / aW) * A_TILT * aH : 0; }
 
     // Gerstner y for a layer at position x and time t
     function aLayerY(layer, x, t) {
@@ -955,7 +955,7 @@ const amenities = [
       aCanvas.style.cssText = [
         'position:fixed', 'top:0', 'left:0', 'width:100vw', 'height:72vh',
         'z-index:41', 'pointer-events:none',
-        'mix-blend-mode:screen', 'opacity:0', 'transition:opacity 0.9s ease',
+        'opacity:0', 'transition:opacity 0.9s ease',
       ].join(';');
       aCanvas.width  = Math.round(aW * adpr);
       aCanvas.height = Math.round(aH * adpr);
