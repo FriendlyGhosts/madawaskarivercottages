@@ -831,6 +831,16 @@ const amenities = [
       return -(t * t * A_TILT * aH);
     }
 
+    // Cascade intro — each band slides down from above into its resting position
+    var INTRO_DUR = 90, INTRO_STAGGER = 9; // frames
+    function aIntroOffset(li) {
+      var start = li * INTRO_STAGGER;
+      if (aT < start) return -aH * 0.55; // waiting — hidden above canvas
+      var p = Math.min(aT - start, INTRO_DUR) / INTRO_DUR;
+      var ease = 1 - (1 - p) * (1 - p) * (1 - p); // easeOutCubic — floats in, settles gently
+      return -aH * 0.55 * (1 - ease); // from -aH*0.55 → 0
+    }
+
     // Gerstner y for a layer at position x and time t
     function aLayerY(layer, x, t) {
       var y = layer.yFrac * aH;
@@ -912,7 +922,10 @@ const amenities = [
       // Draw bottom layer first — each upper layer covers it, revealing a distinct colour band
       for (var li = aLayers.length - 1; li >= 0; li--) {
         var layer = aLayers[li];
+        var introOff = aIntroOffset(li);
         var step = 4;
+        actx.save();
+        actx.translate(0, introOff); // cascade: band enters from above
         var yprev = aLayerY(layer, 0, aT) + aBowY(layer, 0); // aTiltY(0)=0
         actx.beginPath();
         actx.moveTo(0, yprev);
@@ -929,6 +942,7 @@ const amenities = [
         actx.closePath();
         actx.fillStyle = layer.fill;
         actx.fill();
+        actx.restore();
       }
       aT++;
       aAF = requestAnimationFrame(drawAurora);
@@ -973,7 +987,7 @@ const amenities = [
       aCanvas.style.cssText = [
         'position:fixed', 'top:0', 'left:0', 'width:100vw', 'height:72vh',
         'z-index:41', 'pointer-events:none',
-        'mix-blend-mode:multiply', 'opacity:0', 'transition:opacity 0.9s ease',
+        'mix-blend-mode:multiply', 'opacity:0', 'transition:opacity 0.2s ease',
       ].join(';');
       aCanvas.width  = Math.round(totalW * adpr); // full physical width so 100vw CSS fits correctly
       aCanvas.height = Math.round(aH * adpr);
