@@ -807,16 +807,42 @@ const amenities = [
             Math.max(0.5, er.width * (1 - prog2 * 0.55)));
         });
         if (EX_T >= EXPLODE_DUR) {
-          EX_PHASE = 0; EX_PHASE_START = 0; EX_T = 0; exRings = [];
-          rings.forEach(function(ring, ri) { ring.R = BASE_R[ri]; });
+          EX_PHASE = 3; EX_PHASE_START = performance.now(); EX_T = 0; exRings = [];
+          rings.forEach(function(ring) { ring.R = 0; }); // start from centre
         }
+
+      // ── Phase 3: reset — rings emanate outward from centre back to idle ───────
+      } else if (EX_PHASE === 3) {
+        EX_T = performance.now() - EX_PHASE_START;
+        var RESET_DUR = 1400, RESET_STAGGER = 120; // ms
+        var dayA3 = [0.72, 0.50, 0.34], nightA3 = [0.58, 0.38, 0.24], wids3 = [2.8, 2.0, 1.4];
+        var allDone = true;
+        rings.forEach(function(ring, ri) {
+          var rp = Math.max(0, Math.min((EX_T - ri * RESET_STAGGER) / RESET_DUR, 1));
+          if (rp < 1) allDone = false;
+          var re = 1 - (1 - rp) * (1 - rp) * (1 - rp); // easeOutCubic
+          ring.R = BASE_R[ri] * re;
+          var a = (isNight ? nightA3[ri] : dayA3[ri]) * Math.min(rp * 3, 1); // fade in quickly
+          srCtx.beginPath();
+          for (var i3 = 0; i3 <= NSR; i3++) {
+            var th3 = (i3 / NSR) * 2 * Math.PI;
+            var x3 = CS2 + ring.R * Math.cos(th3), y3 = CS2 + ring.R * Math.sin(th3);
+            if (i3 === 0) srCtx.moveTo(x3, y3); else srCtx.lineTo(x3, y3);
+          }
+          srCtx.closePath();
+          srCtx.strokeStyle = isNight ? 'rgba(245,230,150,' + a + ')' : 'rgba(245,200,66,' + a + ')';
+          srCtx.lineWidth = wids3[ri];
+          srCtx.stroke();
+        });
+        if (allDone) { EX_PHASE = 0; EX_PHASE_START = 0; EX_T = 0; }
       }
 
       requestAnimationFrame(drawSunRings);
     }
 
     // ── Aurora state (Gerstner waves, interactive, persists during zen mode) ──
-    var skyEl = null, aCanvas = null, aAF = null, auroraActive = false, tidalInterval = null;
+    var skyEl = null, aCanvas = null, aAF = null, auroraActive = false;
+    var tidalInterval = null, tidalTimeout = null;
     var aW = 0, aH = 0, aT = 0;
 
     // 5 aurora layers — each has a unique fill colour, Gerstner components, and bowstring state
@@ -979,6 +1005,7 @@ const amenities = [
       if (skyEl   && skyEl.parentNode)   { skyEl.parentNode.removeChild(skyEl);     skyEl   = null; }
       if (aCanvas && aCanvas.parentNode) { aCanvas.parentNode.removeChild(aCanvas); aCanvas = null; }
       if (aAF) { cancelAnimationFrame(aAF); aAF = null; }
+      if (tidalTimeout)  { clearTimeout(tidalTimeout);   tidalTimeout  = null; }
       if (tidalInterval) { clearInterval(tidalInterval); tidalInterval = null; }
       auroraActive = false;
 
@@ -1031,11 +1058,15 @@ const amenities = [
         drawAurora();
       }); });
 
-      // Tidal wave every 30 s while zen mode is active
+      // First tidal wave at 15 s, then every 30 s after that
+      if (tidalTimeout)  clearTimeout(tidalTimeout);
       if (tidalInterval) clearInterval(tidalInterval);
-      tidalInterval = setInterval(function() {
+      tidalTimeout = setTimeout(function() {
         if (typeof window.triggerTidalWave === 'function') window.triggerTidalWave();
-      }, 30000);
+        tidalInterval = setInterval(function() {
+          if (typeof window.triggerTidalWave === 'function') window.triggerTidalWave();
+        }, 30000);
+      }, 15000);
     }
 
     // ── Clear effects — called when zen mode is exited ────────────────────────
@@ -1046,6 +1077,7 @@ const amenities = [
         var _s = skyEl; skyEl = null;
         setTimeout(function() { _s.parentNode && _s.parentNode.removeChild(_s); }, 1500);
       }
+      if (tidalTimeout)  { clearTimeout(tidalTimeout);   tidalTimeout  = null; }
       if (tidalInterval) { clearInterval(tidalInterval); tidalInterval = null; }
       if (aCanvas) {
         auroraActive = false;
