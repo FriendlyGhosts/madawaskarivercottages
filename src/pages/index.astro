@@ -850,12 +850,15 @@ const amenities = [
       return -aH * 0.55 * (1 - ease); // from -aH*0.55 → 0
     }
 
+    // Desktop gets bigger aurora waves; mobile is already nicely exaggerated by the smaller canvas
+    var aAmpScale = navigator.maxTouchPoints > 0 ? 1.0 : 2.2;
+
     // Gerstner y for a layer at position x and time t
     function aLayerY(layer, x, t) {
       var y = layer.yFrac * aH;
       for (var j = 0; j < layer.comps.length; j++) {
         var c = layer.comps[j];
-        y += c[0] * Math.sin((2 * Math.PI / aW) * c[1] * x + c[2] * t + c[3]);
+        y += c[0] * aAmpScale * Math.sin((2 * Math.PI / aW) * c[1] * x + c[2] * t + c[3]);
       }
       return y;
     }

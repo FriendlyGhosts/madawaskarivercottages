@@ -115,7 +115,7 @@ const {
       ];
 
       // Per-layer bowstring state — supports multiple concurrent pulses
-      interface Pulse { pullX: number; releaseAmt: number; releaseT: number; hw0?: number; }
+      interface Pulse { pullX: number; releaseAmt: number; releaseT: number; hw0?: number; riseT?: number; }
       interface BowState { engaged: boolean; pullX: number; pullAmt: number; pulses: Pulse[]; }
       const bowStates: BowState[] = gLayers.map(() => ({
         engaged: false, pullX: 0, pullAmt: 0, pulses: [],
@@ -154,7 +154,8 @@ const {
         // All active pulses — each travels independently
         for (const p of st.pulses) {
           const age = t - p.releaseT;
-          const amp = p.releaseAmt * Math.exp(-age * PULSE_DECAY);
+          const rise = p.riseT ? Math.min(age / p.riseT, 1) : 1; // ease in from zero
+          const amp = p.releaseAmt * rise * Math.exp(-age * PULSE_DECAY);
           if (Math.abs(amp) < 0.3) continue;
           const hw = (p.hw0 ?? PULSE_HW0) + age * 1.4;
           for (const cx of [p.pullX - PULSE_SPEED * age, p.pullX + PULSE_SPEED * age]) {
@@ -265,7 +266,7 @@ const {
         const ox = wW * 0.84; // directly below the sun (top-right)
         bowStates.forEach((st, i) => {
           // Downward press (positive = down) with very wide bell — water pressed by sun force
-          st.pulses.push({ pullX: ox, releaseAmt: 72 + i * 12, releaseT: wT + i * 2, hw0: 620 });
+          st.pulses.push({ pullX: ox, releaseAmt: 72 + i * 12, releaseT: wT + i * 2, hw0: 620, riseT: 28 });
         });
       };
 
