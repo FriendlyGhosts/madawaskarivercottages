@@ -196,7 +196,7 @@ const {
       function handleWaveInteraction(mx: number, my: number) {
         gLayers.forEach((gl, i) => {
           const st = bowStates[i];
-          const surf = gl.baseRatio * wH + compY(gl, mx, wT);
+          const surf = gl.baseRatio * wH + compY(gl, mx, wT) + bowDeform(st, mx, wT);
           if (st.engaged) {
             st.pullX   = mx;
             st.pullAmt = my - surf;

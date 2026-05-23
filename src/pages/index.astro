@@ -1031,11 +1031,11 @@ const amenities = [
         drawAurora();
       }); });
 
-      // Tidal wave every 15 s while zen mode is active
+      // Tidal wave every 30 s while zen mode is active
       if (tidalInterval) clearInterval(tidalInterval);
       tidalInterval = setInterval(function() {
         if (typeof window.triggerTidalWave === 'function') window.triggerTidalWave();
-      }, 15000);
+      }, 30000);
     }
 
     // ── Clear effects — called when zen mode is exited ────────────────────────
