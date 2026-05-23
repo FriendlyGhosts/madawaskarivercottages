@@ -1052,8 +1052,8 @@ const amenities = [
 
     // ── Mouse interaction: ring bowstring + aurora ────────────────────────────
     document.addEventListener('mousemove', function(e) {
-      // Ring bowstring (idle phase only)
-      if (EX_PHASE === 0) {
+      // Ring bowstring (idle + compression — not during explosion burst)
+      if (EX_PHASE <= 1) {
         var rect = sunEl.getBoundingClientRect();
         var cx = rect.left + rect.width  / 2;
         var cy = rect.top  + rect.height / 2;

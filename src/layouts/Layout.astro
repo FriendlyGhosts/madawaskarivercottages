@@ -265,8 +265,10 @@ const {
       (window as any).triggerWaveRipple = () => {
         const ox = wW * 0.84; // directly below the sun (top-right)
         bowStates.forEach((st, i) => {
-          // Downward press (positive = down) with very wide bell — water pressed by sun force
-          st.pulses.push({ pullX: ox, releaseAmt: 72 + i * 12, releaseT: wT + i * 2, hw0: 620, riseT: 28 });
+          // Primary shockwave — fast deep press, very wide bell
+          st.pulses.push({ pullX: ox, releaseAmt: 95 + i * 15, releaseT: wT + i * 2, hw0: 650, riseT: 14 });
+          // Secondary trailing ripple — arrives ~0.45s later, narrower, spreads as echo
+          st.pulses.push({ pullX: ox, releaseAmt: 48 + i * 8, releaseT: wT + i * 2 + 27, hw0: 380, riseT: 10 });
         });
       };
 
