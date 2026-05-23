@@ -92,6 +92,7 @@ const {
       wResize();
 
       let wT = 0;
+      const wStartTime = performance.now();
 
       type WComp = [number, number, number, number]; // [A, k, ω, φ]
       function wc(A: number, lambda: number, speed: number, phi: number): WComp {
@@ -253,7 +254,7 @@ const {
           });
         });
         wctx.clearRect(0, 0, wW, wH);
-        wT += 1;
+        wT = (performance.now() - wStartTime) * 0.06; // 60fps-equivalent ticks — frame-rate independent
         gLayers.forEach((l, li) => drawGLayer(l, li));
         requestAnimationFrame(animateWaves);
       }
