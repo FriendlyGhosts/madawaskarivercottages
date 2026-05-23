@@ -832,11 +832,15 @@ const amenities = [
     }
 
     // Cascade intro — each band slides down from above into its resting position
-    var INTRO_DUR = 150, INTRO_STAGGER = 45; // frames — 2.5s travel, 0.75s between bands
+    // Time-based so it runs identically on 60 Hz and 120 Hz screens
+    var INTRO_TRAVEL_MS = 2500; // ms each band takes to settle
+    var INTRO_STAGGER_MS = 750; // ms between each successive band
+    var aStartTime = 0;
     function aIntroOffset(li) {
-      var start = li * INTRO_STAGGER;
-      if (aT < start) return -aH * 0.55; // waiting — hidden above canvas
-      var p = Math.min(aT - start, INTRO_DUR) / INTRO_DUR;
+      var elapsed = performance.now() - aStartTime;
+      var staggered = elapsed - li * INTRO_STAGGER_MS;
+      if (staggered <= 0) return -aH * 0.55; // not yet started — hidden above
+      var p = Math.min(staggered, INTRO_TRAVEL_MS) / INTRO_TRAVEL_MS;
       var ease = 1 - (1 - p) * (1 - p) * (1 - p); // easeOutCubic — floats in, settles gently
       return -aH * 0.55 * (1 - ease); // from -aH*0.55 → 0
     }
@@ -996,6 +1000,7 @@ const amenities = [
 
       // Reset layer state
       aT = 0;
+      aStartTime = performance.now();
       aLayers.forEach(function(layer) { layer.engaged = false; layer.pullAmt = 0; layer.pulses = []; });
       auroraActive = true;
 
