@@ -825,11 +825,11 @@ const amenities = [
     // comps: [amplitude, wavenumber-k, speed, phase-offset]
     // fill: drawn bottom-to-top so each band peeks out between the wave lines above it
     var aLayers = [
-      {yFrac:0.08, fill:'rgba(40,220,90,0.60)',   comps:[[18,1.8,0.006,0.0],[9,2.9,0.004,1.1],[5,4.1,0.003,2.3]], engaged:false, engX:0, pullAmt:0, pulses:[]},
-      {yFrac:0.15, fill:'rgba(145,55,250,0.55)',  comps:[[15,2.1,0.007,0.7],[8,3.4,0.005,1.8],[4,5.0,0.003,0.4]], engaged:false, engX:0, pullAmt:0, pulses:[]},
-      {yFrac:0.22, fill:'rgba(18,198,218,0.58)',  comps:[[20,1.6,0.005,1.5],[10,2.7,0.004,2.2],[6,4.3,0.003,0.9]], engaged:false, engX:0, pullAmt:0, pulses:[]},
-      {yFrac:0.29, fill:'rgba(228,55,165,0.52)',  comps:[[12,2.3,0.008,2.0],[6,3.8,0.005,0.3],[4,5.5,0.003,1.4]], engaged:false, engX:0, pullAmt:0, pulses:[]},
-      {yFrac:0.36, fill:'rgba(58,100,245,0.56)',  comps:[[17,1.9,0.006,0.8],[8,3.1,0.004,1.6],[5,4.7,0.003,2.7]], engaged:false, engX:0, pullAmt:0, pulses:[]},
+      {yFrac:0.08, fill:'rgba(30,200,80,0.72)',   comps:[[18,1.8,0.006,0.0],[9,2.9,0.004,1.1],[5,4.1,0.003,2.3]], engaged:false, engX:0, pullAmt:0, pulses:[]},
+      {yFrac:0.15, fill:'rgba(130,40,240,0.68)',  comps:[[15,2.1,0.007,0.7],[8,3.4,0.005,1.8],[4,5.0,0.003,0.4]], engaged:false, engX:0, pullAmt:0, pulses:[]},
+      {yFrac:0.22, fill:'rgba(10,185,210,0.70)',  comps:[[20,1.6,0.005,1.5],[10,2.7,0.004,2.2],[6,4.3,0.003,0.9]], engaged:false, engX:0, pullAmt:0, pulses:[]},
+      {yFrac:0.29, fill:'rgba(215,40,155,0.65)',  comps:[[12,2.3,0.008,2.0],[6,3.8,0.005,0.3],[4,5.5,0.003,1.4]], engaged:false, engX:0, pullAmt:0, pulses:[]},
+      {yFrac:0.36, fill:'rgba(45,85,235,0.68)',   comps:[[17,1.9,0.006,0.8],[8,3.1,0.004,1.6],[5,4.7,0.003,2.7]], engaged:false, engX:0, pullAmt:0, pulses:[]},
     ];
     var A_ENGAGE_DIST = 28, A_SNAP_DIST = 65;
     var A_PULL_SCALE  = 0.35, A_PULSE_SPEED = 3.5, A_PULSE_DECAY = 0.008;
@@ -986,7 +986,7 @@ const amenities = [
       aCanvas.style.cssText = [
         'position:fixed', 'top:0', 'left:0', 'width:100vw', 'height:72vh',
         'z-index:41', 'pointer-events:none',
-        'mix-blend-mode:screen', 'opacity:0', 'transition:opacity 0.9s ease',
+        'mix-blend-mode:multiply', 'opacity:0', 'transition:opacity 0.9s ease',
       ].join(';');
       aCanvas.width  = Math.round(totalW * adpr); // full physical width so 100vw CSS fits correctly
       aCanvas.height = Math.round(aH * adpr);
