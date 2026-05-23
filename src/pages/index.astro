@@ -600,6 +600,7 @@ const amenities = [
     // ══════════════════════════════════════════════════════════════════════════
     var srCanvas = document.getElementById('sun-rings-canvas');
     var sunEl    = document.getElementById('sun-rings-wrap');
+    var sunDisk  = document.getElementById('sun'); // for colour animation during compression
     if (!srCanvas || !sunEl) return;
     var srCtx = srCanvas.getContext('2d');
 
@@ -620,7 +621,7 @@ const amenities = [
       return { engaged: false, theta: 0, pullAmt: 0, pulses: [] };
     });
 
-    var SR_ENGAGE_DIST = 13, SR_SNAP_DIST = 50, SR_BOW_HW = 0.50;
+    var SR_ENGAGE_DIST = 13, SR_SNAP_DIST = 50, SR_BOW_HW = 1.75; // wide bell — deformation spreads over most of the ring
     var SR_PULL_SCALE  = 0.28, SR_PULSE_SPEED = 0.022, SR_PULSE_DECAY = 0.0022;
     var SR_PULSE_HW0   = 0.55, NSR = 260;
     var srT = 0;
@@ -729,6 +730,17 @@ const amenities = [
         var ease  = prog * prog * prog; // cubic — pressure crawls, then surges
         var push  = 30 * ease;
 
+        // Sun colour: darken→deep orange (first 50%), then supernova brighten (last 50%)
+        if (sunDisk) {
+          if (prog < 0.50) {
+            var dp = prog / 0.50;
+            sunDisk.style.filter = 'brightness(' + (1 - dp * 0.48) + ') sepia(' + (dp * 0.95) + ') saturate(1.8) hue-rotate(' + (dp * 18) + 'deg)';
+          } else {
+            var bp = (prog - 0.50) / 0.50;
+            sunDisk.style.filter = 'brightness(' + (0.52 + bp * 4.5) + ') sepia(' + (0.95 * (1 - bp)) + ') saturate(' + (1.8 - bp * 0.8) + ')';
+          }
+        }
+
         // Vibration ramps up in the final stretch — pressure-cooker shudder
         var vProg  = EX_T >= VIBRATE_START ? (EX_T - VIBRATE_START) / (COMPRESS_DUR - VIBRATE_START) : 0;
         var vibAmp = vProg * 13;                    // grows 0→13px
@@ -777,6 +789,7 @@ const amenities = [
             exRings.push({ R: ir[1] + 3, speed: 3.8 + i * 1.0, alpha: ir[2] * 0.85, width: ir[3] * 0.75, night: isNight });
           });
           EX_PHASE = 2; EX_T = 0;
+          if (sunDisk) sunDisk.style.filter = ''; // snap back — flash overlay takes over
           triggerSkyEffects(isNight);
           if (typeof window.triggerWaveRipple === 'function') window.triggerWaveRipple();
         }
@@ -810,22 +823,22 @@ const amenities = [
     // comps: [amplitude, wavenumber-k, speed, phase-offset]
     // fill: drawn bottom-to-top so each band peeks out between the wave lines above it
     var aLayers = [
-      {yFrac:0.22, fill:'rgba(40,220,90,0.58)',   comps:[[18,1.8,0.006,0.0],[9,2.9,0.004,1.1],[5,4.1,0.003,2.3]], engaged:false, engX:0, pullAmt:0, pulses:[]},
-      {yFrac:0.33, fill:'rgba(145,55,250,0.52)',  comps:[[15,2.1,0.007,0.7],[8,3.4,0.005,1.8],[4,5.0,0.003,0.4]], engaged:false, engX:0, pullAmt:0, pulses:[]},
-      {yFrac:0.44, fill:'rgba(18,198,218,0.56)',  comps:[[20,1.6,0.005,1.5],[10,2.7,0.004,2.2],[6,4.3,0.003,0.9]], engaged:false, engX:0, pullAmt:0, pulses:[]},
-      {yFrac:0.55, fill:'rgba(228,55,165,0.50)',  comps:[[12,2.3,0.008,2.0],[6,3.8,0.005,0.3],[4,5.5,0.003,1.4]], engaged:false, engX:0, pullAmt:0, pulses:[]},
-      {yFrac:0.65, fill:'rgba(58,100,245,0.54)',  comps:[[17,1.9,0.006,0.8],[8,3.1,0.004,1.6],[5,4.7,0.003,2.7]], engaged:false, engX:0, pullAmt:0, pulses:[]},
+      {yFrac:0.08, fill:'rgba(40,220,90,0.60)',   comps:[[18,1.8,0.006,0.0],[9,2.9,0.004,1.1],[5,4.1,0.003,2.3]], engaged:false, engX:0, pullAmt:0, pulses:[]},
+      {yFrac:0.15, fill:'rgba(145,55,250,0.55)',  comps:[[15,2.1,0.007,0.7],[8,3.4,0.005,1.8],[4,5.0,0.003,0.4]], engaged:false, engX:0, pullAmt:0, pulses:[]},
+      {yFrac:0.22, fill:'rgba(18,198,218,0.58)',  comps:[[20,1.6,0.005,1.5],[10,2.7,0.004,2.2],[6,4.3,0.003,0.9]], engaged:false, engX:0, pullAmt:0, pulses:[]},
+      {yFrac:0.29, fill:'rgba(228,55,165,0.52)',  comps:[[12,2.3,0.008,2.0],[6,3.8,0.005,0.3],[4,5.5,0.003,1.4]], engaged:false, engX:0, pullAmt:0, pulses:[]},
+      {yFrac:0.36, fill:'rgba(58,100,245,0.56)',  comps:[[17,1.9,0.006,0.8],[8,3.1,0.004,1.6],[5,4.7,0.003,2.7]], engaged:false, engX:0, pullAmt:0, pulses:[]},
     ];
     var A_ENGAGE_DIST = 28, A_SNAP_DIST = 65;
     var A_PULL_SCALE  = 0.35, A_PULSE_SPEED = 3.5, A_PULSE_DECAY = 0.008;
-    var A_TILT = 0.52; // total upward shift at right edge as fraction of canvas height
+    var A_TILT = 0.72; // total upward shift across the drawing width
 
-    // Curved arch matching the red-line annotation:
-    // flat for the first ~15% of width, then quadratic sweep up toward top-right
-    // bands naturally clip at y=0, so they fade out one by one before reaching the sun
+    // Curved arch: gentle at left, steepens toward right
+    // Curve starts at 5% width so bands begin angling almost immediately
+    // All bands clip at y=0 before x=78% screen width — sun stays clear
     function aTiltY(x) {
       if (aW <= 0) return 0;
-      var t = Math.max(0, x / aW - 0.15) / 0.85; // 0→1 starting at 15% width
+      var t = Math.max(0, x / aW - 0.05) / 0.95; // 0→1 starting at 5% of drawing width
       return -(t * t * A_TILT * aH);
     }
 
@@ -971,17 +984,18 @@ const amenities = [
         }, 300);
       }); });
 
-      // Aurora canvas — full width, pinned to top of viewport, screen-blended
+      // Aurora canvas — full-width element but drawing limited to 78% to leave sun clear
       var adpr = window.devicePixelRatio || 1;
-      aW = window.innerWidth;
-      aH = Math.round(window.innerHeight * 0.72); // taller so angled waves aren't clipped
+      var totalW = window.innerWidth;
+      aW = Math.round(totalW * 0.78); // drawing width — aurora clips before the sun
+      aH = Math.round(window.innerHeight * 0.72);
       aCanvas = document.createElement('canvas');
       aCanvas.style.cssText = [
         'position:fixed', 'top:0', 'left:0', 'width:100vw', 'height:72vh',
         'z-index:41', 'pointer-events:none',
         'mix-blend-mode:screen', 'opacity:0', 'transition:opacity 0.9s ease',
       ].join(';');
-      aCanvas.width  = Math.round(aW * adpr);
+      aCanvas.width  = Math.round(totalW * adpr); // full physical width so 100vw CSS fits correctly
       aCanvas.height = Math.round(aH * adpr);
       aCanvas.getContext('2d').setTransform(adpr, 0, 0, adpr, 0, 0);
       document.body.appendChild(aCanvas);
