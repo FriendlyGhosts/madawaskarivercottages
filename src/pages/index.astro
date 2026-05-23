@@ -704,7 +704,7 @@ const amenities = [
             return Math.abs(p.releaseAmt * Math.exp(-age * SR_PULSE_DECAY)) >= 0.25;
           });
         });
-        var dayA = [0.38, 0.26, 0.17], nightA = [0.28, 0.18, 0.11], wids = [1.6, 1.2, 0.9];
+        var dayA = [0.72, 0.50, 0.34], nightA = [0.58, 0.38, 0.24], wids = [2.8, 2.0, 1.4];
         rings.forEach(function(ring, ri) {
           var bow = bowStates[ri];
           srCtx.beginPath();
@@ -729,7 +729,7 @@ const amenities = [
         var push  = 24 * ease;
 
         // Outer rings displaced outward and brightened
-        var bDA = [0.38, 0.26, 0.17], bNA = [0.28, 0.18, 0.11], bW = [1.6, 1.2, 0.9];
+        var bDA = [0.72, 0.50, 0.34], bNA = [0.58, 0.38, 0.24], bW = [2.8, 2.0, 1.4];
         rings.forEach(function(ring, ri) {
           ring.R = BASE_R[ri] + push * (1 + ri * 0.14);
           var bow = bowStates[ri];
@@ -770,6 +770,7 @@ const amenities = [
           });
           EX_PHASE = 2; EX_T = 0;
           triggerSkyEffects(isNight);
+          if (typeof window.triggerWaveRipple === 'function') window.triggerWaveRipple();
         }
 
       // ── Phase 2: explode — all rings fly outward and fade ────────────────────
@@ -797,14 +798,15 @@ const amenities = [
     var skyEl = null, aCanvas = null, aAF = null, auroraActive = false;
     var aW = 0, aH = 0, aT = 0;
 
-    // 5 aurora layers — each has colour, Gerstner components, and bowstring state
+    // 5 aurora layers — each has a unique fill colour, Gerstner components, and bowstring state
     // comps: [amplitude, wavenumber-k, speed, phase-offset]
+    // fill: drawn bottom-to-top so each band peeks out between the wave lines above it
     var aLayers = [
-      {yFrac:0.13, r:60,  g:220, b:130, peakA:0.58, comps:[[18,1.8,0.006,0.0],[9,2.9,0.004,1.1],[5,4.1,0.003,2.3]], engaged:false, engX:0, pullAmt:0, pulses:[]},
-      {yFrac:0.26, r:100, g:60,  b:230, peakA:0.45, comps:[[15,2.1,0.007,0.7],[8,3.4,0.005,1.8],[4,5.0,0.003,0.4]], engaged:false, engX:0, pullAmt:0, pulses:[]},
-      {yFrac:0.38, r:30,  g:200, b:210, peakA:0.52, comps:[[20,1.6,0.005,1.5],[10,2.7,0.004,2.2],[6,4.3,0.003,0.9]], engaged:false, engX:0, pullAmt:0, pulses:[]},
-      {yFrac:0.49, r:230, g:70,  b:170, peakA:0.38, comps:[[12,2.3,0.008,2.0],[6,3.8,0.005,0.3],[4,5.5,0.003,1.4]], engaged:false, engX:0, pullAmt:0, pulses:[]},
-      {yFrac:0.59, r:70,  g:140, b:255, peakA:0.44, comps:[[17,1.9,0.006,0.8],[8,3.1,0.004,1.6],[5,4.7,0.003,2.7]], engaged:false, engX:0, pullAmt:0, pulses:[]},
+      {yFrac:0.13, fill:'rgba(40,255,100,0.74)',  comps:[[18,1.8,0.006,0.0],[9,2.9,0.004,1.1],[5,4.1,0.003,2.3]], engaged:false, engX:0, pullAmt:0, pulses:[]},
+      {yFrac:0.26, fill:'rgba(155,50,255,0.70)',  comps:[[15,2.1,0.007,0.7],[8,3.4,0.005,1.8],[4,5.0,0.003,0.4]], engaged:false, engX:0, pullAmt:0, pulses:[]},
+      {yFrac:0.38, fill:'rgba(0,220,200,0.72)',   comps:[[20,1.6,0.005,1.5],[10,2.7,0.004,2.2],[6,4.3,0.003,0.9]], engaged:false, engX:0, pullAmt:0, pulses:[]},
+      {yFrac:0.49, fill:'rgba(255,55,175,0.68)',  comps:[[12,2.3,0.008,2.0],[6,3.8,0.005,0.3],[4,5.5,0.003,1.4]], engaged:false, engX:0, pullAmt:0, pulses:[]},
+      {yFrac:0.59, fill:'rgba(30,110,255,0.72)',  comps:[[17,1.9,0.006,0.8],[8,3.1,0.004,1.6],[5,4.7,0.003,2.7]], engaged:false, engX:0, pullAmt:0, pulses:[]},
     ];
     var A_ENGAGE_DIST = 28, A_SNAP_DIST = 65;
     var A_PULL_SCALE  = 0.35, A_PULSE_SPEED = 3.5, A_PULSE_DECAY = 0.008;
@@ -891,10 +893,11 @@ const amenities = [
       });
       var actx = aCanvas.getContext('2d');
       actx.clearRect(0, 0, aW, aH);
-      aLayers.forEach(function(layer) {
-        // Single crisp stroke — quadratic bezier like the river waves, with diagonal tilt
+      // Draw bottom layer first — each upper layer covers it, revealing a distinct colour band
+      for (var li = aLayers.length - 1; li >= 0; li--) {
+        var layer = aLayers[li];
         var step = 4;
-        var yprev = aLayerY(layer, 0, aT) + aBowY(layer, 0); // aTiltY(0) = 0
+        var yprev = aLayerY(layer, 0, aT) + aBowY(layer, 0); // aTiltY(0)=0
         actx.beginPath();
         actx.moveTo(0, yprev);
         for (var xi = 1; xi * step <= aW; xi++) {
@@ -904,11 +907,13 @@ const amenities = [
           actx.quadraticCurveTo(xp, yprev, (xp + xc) / 2, (yprev + yc) / 2);
           yprev = yc;
         }
-        actx.strokeStyle = 'rgba(' + layer.r + ',' + layer.g + ',' + layer.b + ',0.78)';
-        actx.lineWidth   = 1.5;
-        actx.lineCap = 'round'; actx.lineJoin = 'round';
-        actx.stroke();
-      });
+        // Fill upward to y=0 — inverted river-wave style
+        actx.lineTo(aW, 0);
+        actx.lineTo(0, 0);
+        actx.closePath();
+        actx.fillStyle = layer.fill;
+        actx.fill();
+      }
       aT++;
       aAF = requestAnimationFrame(drawAurora);
     }
@@ -921,15 +926,26 @@ const amenities = [
       if (aAF) { cancelAnimationFrame(aAF); aAF = null; }
       auroraActive = false;
 
-      // Subtle full-screen red wash — flat, no gradient, no centering
+      // Solar flare flash — bright orange burst that fades back to normal sky
       skyEl = document.createElement('div');
       skyEl.style.cssText = [
         'position:fixed', 'inset:0', 'z-index:40', 'pointer-events:none',
-        'background:' + (isNight ? 'rgba(168,26,5,0.18)' : 'rgba(188,38,8,0.15)'),
-        'mix-blend-mode:multiply', 'opacity:0', 'transition:opacity 0.8s ease',
+        'background:' + (isNight ? 'rgba(255,145,20,0.58)' : 'rgba(255,165,30,0.70)'),
+        'mix-blend-mode:screen', 'opacity:0', 'transition:opacity 0.25s ease',
       ].join(';');
       document.body.appendChild(skyEl);
-      requestAnimationFrame(function() { requestAnimationFrame(function() { skyEl.style.opacity = '1'; }); });
+      requestAnimationFrame(function() { requestAnimationFrame(function() {
+        skyEl.style.opacity = '1';
+        // Flash peak held briefly, then fade out completely
+        setTimeout(function() {
+          skyEl.style.transition = 'opacity 2.4s ease';
+          skyEl.style.opacity = '0';
+          setTimeout(function() {
+            if (skyEl && skyEl.parentNode) skyEl.parentNode.removeChild(skyEl);
+            skyEl = null;
+          }, 2500);
+        }, 300);
+      }); });
 
       // Aurora canvas — full width, pinned to top of viewport, screen-blended
       var adpr = window.devicePixelRatio || 1;

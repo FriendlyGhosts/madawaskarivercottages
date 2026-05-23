@@ -259,6 +259,15 @@ const {
       }
       animateWaves();
 
+      // Expose wave ripple so solar explosion can disturb the river
+      (window as any).triggerWaveRipple = () => {
+        const ox = wW * 0.80; // origin near top-right (sun side)
+        bowStates.forEach((st, i) => {
+          // Stagger slightly so the shockwave has a rolling feel
+          st.pulses.push({ pullX: ox, releaseAmt: -(58 + i * 10), releaseT: wT + i * 2 });
+        });
+      };
+
       // Hide nav on scroll down, reveal on scroll up
       const navEl = document.querySelector('nav') as HTMLElement;
       let lastScrollY = 0;
