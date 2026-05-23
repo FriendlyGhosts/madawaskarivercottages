@@ -595,8 +595,11 @@ const amenities = [
 
   <script is:inline>
   (function() {
+    // ══════════════════════════════════════════════════════════════════════════
+    // SUN RINGS
+    // ══════════════════════════════════════════════════════════════════════════
     var srCanvas = document.getElementById('sun-rings-canvas');
-    var sunEl = document.getElementById('sun-rings-wrap');
+    var sunEl    = document.getElementById('sun-rings-wrap');
     if (!srCanvas || !sunEl) return;
     var srCtx = srCanvas.getContext('2d');
 
@@ -790,95 +793,184 @@ const amenities = [
       requestAnimationFrame(drawSunRings);
     }
 
-    // ── Sky reddening + aurora canvas ─────────────────────────────────────────
+    // ── Aurora state (Gerstner waves, interactive, persists during zen mode) ──
+    var skyEl = null, aCanvas = null, aAF = null, auroraActive = false;
+    var aW = 0, aH = 0, aT = 0;
+
+    // 5 aurora layers — each has colour, Gerstner components, and bowstring state
+    // comps: [amplitude, wavenumber-k, speed, phase-offset]
+    var aLayers = [
+      {yFrac:0.13, r:60,  g:220, b:130, peakA:0.58, comps:[[18,1.8,0.006,0.0],[9,2.9,0.004,1.1],[5,4.1,0.003,2.3]], engaged:false, engX:0, pullAmt:0, pulses:[]},
+      {yFrac:0.26, r:100, g:60,  b:230, peakA:0.45, comps:[[15,2.1,0.007,0.7],[8,3.4,0.005,1.8],[4,5.0,0.003,0.4]], engaged:false, engX:0, pullAmt:0, pulses:[]},
+      {yFrac:0.38, r:30,  g:200, b:210, peakA:0.52, comps:[[20,1.6,0.005,1.5],[10,2.7,0.004,2.2],[6,4.3,0.003,0.9]], engaged:false, engX:0, pullAmt:0, pulses:[]},
+      {yFrac:0.49, r:230, g:70,  b:170, peakA:0.38, comps:[[12,2.3,0.008,2.0],[6,3.8,0.005,0.3],[4,5.5,0.003,1.4]], engaged:false, engX:0, pullAmt:0, pulses:[]},
+      {yFrac:0.59, r:70,  g:140, b:255, peakA:0.44, comps:[[17,1.9,0.006,0.8],[8,3.1,0.004,1.6],[5,4.7,0.003,2.7]], engaged:false, engX:0, pullAmt:0, pulses:[]},
+    ];
+    var A_ENGAGE_DIST = 28, A_SNAP_DIST = 65;
+    var A_PULL_SCALE  = 0.35, A_PULSE_SPEED = 3.5, A_PULSE_DECAY = 0.008;
+
+    // Gerstner y for a layer at position x and time t
+    function aLayerY(layer, x, t) {
+      var y = layer.yFrac * aH;
+      for (var j = 0; j < layer.comps.length; j++) {
+        var c = layer.comps[j];
+        y += c[0] * Math.sin((2 * Math.PI / aW) * c[1] * x + c[2] * t + c[3]);
+      }
+      return y;
+    }
+
+    // Bowstring + traveling-pulse displacement for a layer at x
+    function aBowY(layer, x) {
+      var res = 0;
+      if (layer.engaged) {
+        var dx = x - layer.engX;
+        var hw = aW * 0.30;
+        if (Math.abs(dx) < hw) {
+          var b = 0.5 + 0.5 * Math.cos(Math.PI * dx / hw);
+          res += layer.pullAmt * A_PULL_SCALE * b * b;
+        }
+      }
+      for (var p = 0; p < layer.pulses.length; p++) {
+        var pulse = layer.pulses[p];
+        var age = aT - pulse.releaseT;
+        var amp = pulse.releaseAmt * Math.exp(-age * A_PULSE_DECAY);
+        if (Math.abs(amp) < 0.5) continue;
+        var hw2 = aW * 0.07 + age * A_PULSE_SPEED;
+        var ctrs = [pulse.releaseX - A_PULSE_SPEED * age, pulse.releaseX + A_PULSE_SPEED * age];
+        for (var ci = 0; ci < 2; ci++) {
+          var d2 = x - ctrs[ci];
+          if (Math.abs(d2) < hw2) {
+            var b2 = 0.5 + 0.5 * Math.cos(Math.PI * d2 / hw2);
+            res += amp * 0.55 * b2 * b2;
+          }
+        }
+      }
+      return res;
+    }
+
+    // Engage / snap aurora layers based on cursor position
+    function updateAuroraInteraction(mx, my) {
+      if (!auroraActive) return;
+      aLayers.forEach(function(layer) {
+        if (layer.engaged) {
+          layer.engX    = mx;
+          layer.pullAmt = my - layer.yFrac * aH;
+          if (Math.abs(layer.pullAmt) >= A_SNAP_DIST) {
+            layer.pulses.push({ releaseX: mx, releaseAmt: layer.pullAmt, releaseT: aT });
+            layer.engaged = false; layer.pullAmt = 0;
+          }
+        } else {
+          var dist = Math.abs(my - aLayerY(layer, mx, aT));
+          if (dist <= A_ENGAGE_DIST) { layer.engaged = true; layer.engX = mx; layer.pullAmt = 0; }
+        }
+      });
+    }
+
+    // Release any engaged aurora layers with a pulse on mouse-up / touch-end
+    function snapAuroraLayers() {
+      if (!auroraActive) return;
+      aLayers.forEach(function(layer) {
+        if (layer.engaged) {
+          layer.pulses.push({ releaseX: layer.engX, releaseAmt: layer.pullAmt, releaseT: aT });
+          layer.engaged = false; layer.pullAmt = 0;
+        }
+      });
+    }
+
+    function drawAurora() {
+      if (!auroraActive || !aCanvas) return;
+      // Expire old pulses
+      aLayers.forEach(function(layer) {
+        layer.pulses = layer.pulses.filter(function(p) {
+          return Math.abs(p.releaseAmt * Math.exp(-(aT - p.releaseT) * A_PULSE_DECAY)) >= 0.5;
+        });
+      });
+      var actx = aCanvas.getContext('2d');
+      actx.clearRect(0, 0, aW, aH);
+      aLayers.forEach(function(layer) {
+        // Three passes: core / inner glow / outer haze
+        [[layer.peakA, 6], [layer.peakA * 0.48, 15], [layer.peakA * 0.20, 34]].forEach(function(pass) {
+          actx.beginPath();
+          for (var x = 0; x <= aW; x += 4) {
+            var y = aLayerY(layer, x, aT) + aBowY(layer, x);
+            if (x === 0) actx.moveTo(x, y); else actx.lineTo(x, y);
+          }
+          actx.strokeStyle = 'rgba(' + layer.r + ',' + layer.g + ',' + layer.b + ',' + pass[0] + ')';
+          actx.lineWidth   = pass[1];
+          actx.lineCap = 'round'; actx.lineJoin = 'round';
+          actx.stroke();
+        });
+      });
+      aT++;
+      aAF = requestAnimationFrame(drawAurora);
+    }
+
+    // ── Persistent sky + aurora — called when zen mode is entered ─────────────
     function triggerSkyEffects(isNight) {
-      // Warm red-orange radial overlay — multiply-blends so content stays readable
-      var skyEl = document.createElement('div');
+      // Tear down any remnants
+      if (skyEl   && skyEl.parentNode)   { skyEl.parentNode.removeChild(skyEl);     skyEl   = null; }
+      if (aCanvas && aCanvas.parentNode) { aCanvas.parentNode.removeChild(aCanvas); aCanvas = null; }
+      if (aAF) { cancelAnimationFrame(aAF); aAF = null; }
+      auroraActive = false;
+
+      // Deep-red sky overlay centred on the sun (top-right corner, ~86% 12%)
+      skyEl = document.createElement('div');
       skyEl.style.cssText = [
         'position:fixed', 'inset:0', 'z-index:40', 'pointer-events:none',
-        'background:radial-gradient(ellipse at 62% 28%,' +
-          (isNight ? 'rgba(200,28,8,0.52),rgba(140,12,4,0.26) 55%' : 'rgba(220,58,14,0.44),rgba(170,36,8,0.22) 55%') +
-          ',transparent 82%)',
-        'mix-blend-mode:multiply', 'opacity:0', 'transition:opacity 0.65s ease',
+        'background:radial-gradient(ellipse 72% 58% at 86% 12%,' +
+          (isNight
+            ? 'rgba(220,18,4,0.82),rgba(165,8,2,0.56) 36%,rgba(95,4,2,0.24) 66%'
+            : 'rgba(240,46,8,0.74),rgba(182,24,5,0.48) 36%,rgba(106,12,3,0.20) 66%') +
+          ',transparent 84%)',
+        'mix-blend-mode:multiply', 'opacity:0', 'transition:opacity 0.8s ease',
       ].join(';');
       document.body.appendChild(skyEl);
       requestAnimationFrame(function() { requestAnimationFrame(function() { skyEl.style.opacity = '1'; }); });
-      setTimeout(function() {
-        skyEl.style.transition = 'opacity 1.8s ease';
-        skyEl.style.opacity = '0';
-      }, 3400);
-      setTimeout(function() { skyEl.parentNode && skyEl.parentNode.removeChild(skyEl); }, 5400);
 
-      // Aurora canvas — positioned top-left, rotated, screen-blended
-      var wrap = document.createElement('div');
-      wrap.style.cssText = [
-        'position:fixed', 'top:-22%', 'left:-18%', 'width:84vw', 'height:70vh',
-        'z-index:41', 'pointer-events:none',
-        'transform:rotate(-20deg)', 'transform-origin:50% 50%',
-        'opacity:0', 'transition:opacity 0.9s ease',
-      ].join(';');
-      document.body.appendChild(wrap);
-
-      var ac = document.createElement('canvas');
-      wrap.appendChild(ac);
-      ac.style.cssText = 'width:100%;height:100%;display:block;mix-blend-mode:screen;';
-      var W = Math.round(window.innerWidth  * 0.84);
-      var H = Math.round(window.innerHeight * 0.70);
+      // Aurora canvas — full width, pinned to top of viewport, screen-blended
       var adpr = window.devicePixelRatio || 1;
-      ac.width  = Math.round(W * adpr);
-      ac.height = Math.round(H * adpr);
-      var actx = ac.getContext('2d');
-      actx.setTransform(adpr, 0, 0, adpr, 0, 0);
+      aW = window.innerWidth;
+      aH = Math.round(window.innerHeight * 0.58);
+      aCanvas = document.createElement('canvas');
+      aCanvas.style.cssText = [
+        'position:fixed', 'top:0', 'left:0', 'width:100vw', 'height:58vh',
+        'z-index:41', 'pointer-events:none',
+        'mix-blend-mode:screen', 'opacity:0', 'transition:opacity 1.0s ease',
+      ].join(';');
+      aCanvas.width  = Math.round(aW * adpr);
+      aCanvas.height = Math.round(aH * adpr);
+      aCanvas.getContext('2d').setTransform(adpr, 0, 0, adpr, 0, 0);
+      document.body.appendChild(aCanvas);
 
-      // Aurora bands: [yFrac, amp, r,g,b, peakAlpha, bandwidth, f1,f2, s1,s2, phase]
-      var bands = [
-        [0.14, 30, 60,220,130,  0.56, 26, 0.007,0.004, 0.015,0.009, 0.0],
-        [0.29, 24, 100,60,230,  0.44, 20, 0.005,0.003, 0.012,0.007, 1.1],
-        [0.44, 32, 30,200,210,  0.50, 24, 0.008,0.005, 0.017,0.010, 2.3],
-        [0.59, 19, 230,70,170,  0.37, 17, 0.006,0.004, 0.013,0.008, 0.7],
-        [0.72, 27, 70,140,255,  0.42, 22, 0.007,0.003, 0.014,0.009, 1.8],
-      ];
-      var aT = 0, aAF;
-
-      function drawAurora() {
-        actx.clearRect(0, 0, W, H);
-        bands.forEach(function(b) {
-          var yC = b[0] * H, amp = b[1];
-          var rv = b[2], gv = b[3], bv = b[4];
-          var pA = b[5], bw = b[6];
-          var f1 = b[7], f2 = b[8], s1 = b[9], s2 = b[10], ph = b[11];
-          // Three passes: bright core, inner glow, outer haze
-          [[pA, bw], [pA * 0.48, bw * 2.0], [pA * 0.20, bw * 4.0]].forEach(function(pass) {
-            actx.beginPath();
-            for (var x = 0; x <= W; x += 3) {
-              var y = yC + amp * Math.sin(x * f1 + aT * s1 + ph)
-                         + amp * 0.38 * Math.sin(x * f2 + aT * s2 + ph * 1.7);
-              if (x === 0) actx.moveTo(x, y); else actx.lineTo(x, y);
-            }
-            actx.strokeStyle = 'rgba(' + rv + ',' + gv + ',' + bv + ',' + pass[0] + ')';
-            actx.lineWidth   = pass[1];
-            actx.lineCap     = 'round';
-            actx.stroke();
-          });
-        });
-        aT++;
-        aAF = requestAnimationFrame(drawAurora);
-      }
+      // Reset layer state
+      aT = 0;
+      aLayers.forEach(function(layer) { layer.engaged = false; layer.pullAmt = 0; layer.pulses = []; });
+      auroraActive = true;
 
       requestAnimationFrame(function() { requestAnimationFrame(function() {
-        wrap.style.opacity = '0.90';
+        aCanvas.style.opacity = '1';
         drawAurora();
       }); });
-
-      setTimeout(function() {
-        wrap.style.transition = 'opacity 1.5s ease';
-        wrap.style.opacity    = '0';
-        setTimeout(function() {
-          cancelAnimationFrame(aAF);
-          if (wrap.parentNode) wrap.parentNode.removeChild(wrap);
-        }, 1600);
-      }, 6000);
     }
+
+    // ── Clear effects — called when zen mode is exited ────────────────────────
+    window.clearSkyEffects = function() {
+      if (skyEl) {
+        skyEl.style.transition = 'opacity 1.4s ease';
+        skyEl.style.opacity = '0';
+        var _s = skyEl; skyEl = null;
+        setTimeout(function() { _s.parentNode && _s.parentNode.removeChild(_s); }, 1500);
+      }
+      if (aCanvas) {
+        auroraActive = false;
+        if (aAF) { cancelAnimationFrame(aAF); aAF = null; }
+        aCanvas.style.transition = 'opacity 1.4s ease';
+        aCanvas.style.opacity = '0';
+        var _a = aCanvas; aCanvas = null;
+        setTimeout(function() { _a.parentNode && _a.parentNode.removeChild(_a); }, 1500);
+        aLayers.forEach(function(layer) { layer.engaged = false; layer.pullAmt = 0; layer.pulses = []; });
+      }
+    };
 
     // ── Expose trigger to the global scope ───────────────────────────────────
     window.triggerSunExplosion = function() {
@@ -887,29 +979,44 @@ const amenities = [
       bowStates.forEach(function(bow) { bow.engaged = false; bow.pullAmt = 0; });
     };
 
-    // ── Mouse / ring bowstring interaction (idle only) ───────────────────────
+    // ── Mouse interaction: ring bowstring + aurora ────────────────────────────
     document.addEventListener('mousemove', function(e) {
-      if (EX_PHASE !== 0) return;
-      var rect = sunEl.getBoundingClientRect();
-      var cx = rect.left + rect.width  / 2;
-      var cy = rect.top  + rect.height / 2;
-      var dx = e.clientX - cx, dy = e.clientY - cy;
-      var dist = Math.sqrt(dx * dx + dy * dy);
-      var theta = Math.atan2(dy, dx);
-      rings.forEach(function(ring, ri) {
-        var bow = bowStates[ri];
-        var dfr = Math.abs(dist - ring.R);
-        if (bow.engaged) {
-          bow.theta = theta; bow.pullAmt = dist - ring.R;
-          if (Math.abs(bow.pullAmt) >= SR_SNAP_DIST) {
-            bow.pulses.push({ theta: bow.theta, releaseAmt: bow.pullAmt * SR_PULL_SCALE, releaseT: srT });
-            bow.engaged = false; bow.pullAmt = 0;
+      // Ring bowstring (idle phase only)
+      if (EX_PHASE === 0) {
+        var rect = sunEl.getBoundingClientRect();
+        var cx = rect.left + rect.width  / 2;
+        var cy = rect.top  + rect.height / 2;
+        var dx = e.clientX - cx, dy = e.clientY - cy;
+        var dist = Math.sqrt(dx * dx + dy * dy);
+        var theta = Math.atan2(dy, dx);
+        rings.forEach(function(ring, ri) {
+          var bow = bowStates[ri];
+          var dfr = Math.abs(dist - ring.R);
+          if (bow.engaged) {
+            bow.theta = theta; bow.pullAmt = dist - ring.R;
+            if (Math.abs(bow.pullAmt) >= SR_SNAP_DIST) {
+              bow.pulses.push({ theta: bow.theta, releaseAmt: bow.pullAmt * SR_PULL_SCALE, releaseT: srT });
+              bow.engaged = false; bow.pullAmt = 0;
+            }
+          } else if (dfr <= SR_ENGAGE_DIST) {
+            bow.engaged = true; bow.theta = theta; bow.pullAmt = 0;
           }
-        } else if (dfr <= SR_ENGAGE_DIST) {
-          bow.engaged = true; bow.theta = theta; bow.pullAmt = 0;
-        }
-      });
+        });
+      }
+      // Aurora bowstring
+      updateAuroraInteraction(e.clientX, e.clientY);
     });
+
+    // Snap aurora on mouse release
+    document.addEventListener('mouseup', function() { snapAuroraLayers(); });
+
+    // Touch interaction for aurora (passive — scroll still works)
+    document.addEventListener('touchmove', function(e) {
+      if (!auroraActive) return;
+      var t = e.touches[0];
+      updateAuroraInteraction(t.clientX, t.clientY);
+    }, { passive: true });
+    document.addEventListener('touchend', function() { snapAuroraLayers(); }, { passive: true });
 
     drawSunRings();
   })();
@@ -1020,28 +1127,38 @@ const amenities = [
   </script>
 
   <script>
-    // ── Sun: triple-click → solar explosion ──────────────────────────────────
+    // ── Sun: triple-click → toggle zen mode ──────────────────────────────────
+    // Entering zen: triggers the solar explosion + sky reddening + aurora
+    // Exiting zen:  clears sky + aurora, restores normal view
     let _sc = 0, _st: ReturnType<typeof setTimeout> | null = null;
     function _sunClick() {
       _sc++;
       if (_st) clearTimeout(_st);
       if (_sc >= 3) {
         _sc = 0;
-        (window as any).triggerSunExplosion?.();
+        const entering = !document.documentElement.classList.contains('zen-mode');
+        document.documentElement.classList.toggle('zen-mode');
+        if (entering) {
+          (window as any).triggerSunExplosion?.();
+        } else {
+          (window as any).clearSkyEffects?.();
+        }
       } else {
         _st = setTimeout(() => { _sc = 0; }, 500);
       }
     }
     document.getElementById('sun')?.addEventListener('click', _sunClick);
 
-    // ── Moon: triple-click → zen mode ────────────────────────────────────────
+    // ── Moon: triple-click → toggle zen mode (clears effects on exit) ────────
     let _zc = 0, _zt: ReturnType<typeof setTimeout> | null = null;
     function _zen() {
       _zc++;
       if (_zt) clearTimeout(_zt);
       if (_zc >= 3) {
         _zc = 0;
+        const exiting = document.documentElement.classList.contains('zen-mode');
         document.documentElement.classList.toggle('zen-mode');
+        if (exiting) (window as any).clearSkyEffects?.();
       } else {
         _zt = setTimeout(() => { _zc = 0; }, 500);
       }
