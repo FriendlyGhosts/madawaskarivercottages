@@ -737,8 +737,8 @@ const amenities = [
 
         // Vibration ramps up in the final stretch — pressure-cooker shudder
         var vProg  = EX_T >= VIBRATE_START ? (EX_T - VIBRATE_START) / (COMPRESS_DUR - VIBRATE_START) : 0;
-        var vibAmp = vProg * 13;                    // grows 0→13px
-        var vibHz  = 0.28 + vProg * 1.80;           // frequency ramps up
+        var vibAmp = vProg * 9;                     // grows 0→9px
+        var vibHz  = 0.22 + vProg * 1.40;           // temporal frequency ramps up
 
         // Outer rings displaced outward, brightened, and shuddering
         var bDA = [0.72, 0.50, 0.34], bNA = [0.58, 0.38, 0.24], bW = [2.8, 2.0, 1.4];
@@ -749,7 +749,13 @@ const amenities = [
           var first2 = true;
           for (var i = 0; i <= NSR; i++) {
             var theta = (i / NSR) * 2 * Math.PI;
-            var vib = vibAmp * Math.sin(srT * vibHz + ri * 1.3); // per-ring phase offset
+            // Spatially-varied trembling: multiple angular modes overlap so each point
+            // on the ring shudders independently — no uniform pulsing
+            var vib = vibAmp * (
+              Math.sin(srT * vibHz       + theta * 2 + ri * 1.30) * 0.50 +
+              Math.sin(srT * vibHz * 1.4 + theta * 3 + ri * 0.85) * 0.32 +
+              Math.sin(srT * vibHz * 0.7 + theta * 5 + ri * 1.70) * 0.18
+            );
             var r = ringWaveR(ring, theta, srT) + bowDeformR(bow, theta, srT) + vib;
             var x = CS2 + r * Math.cos(theta), y = CS2 + r * Math.sin(theta);
             if (first2) { srCtx.moveTo(x, y); first2 = false; } else srCtx.lineTo(x, y);
