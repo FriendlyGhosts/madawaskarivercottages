@@ -255,7 +255,7 @@ const {
           });
         });
         wctx.clearRect(0, 0, wW, wH);
-        wT = (performance.now() - wStartTime) * 0.06; // 60fps-equivalent ticks — frame-rate independent
+        wT = (performance.now() - wStartTime) * 0.09; // +50% speed vs 60fps baseline
         gLayers.forEach((l, li) => drawGLayer(l, li));
         requestAnimationFrame(animateWaves);
       }
