@@ -115,7 +115,7 @@ const {
       ];
 
       // Per-layer bowstring state — supports multiple concurrent pulses
-      interface Pulse { pullX: number; releaseAmt: number; releaseT: number; hw0?: number; riseT?: number; }
+      interface Pulse { pullX: number; releaseAmt: number; releaseT: number; hw0?: number; riseT?: number; decay?: number; }
       interface BowState { engaged: boolean; pullX: number; pullAmt: number; pulses: Pulse[]; }
       const bowStates: BowState[] = gLayers.map(() => ({
         engaged: false, pullX: 0, pullAmt: 0, pulses: [],
@@ -155,7 +155,7 @@ const {
         for (const p of st.pulses) {
           const age = t - p.releaseT;
           const rise = p.riseT ? Math.min(age / p.riseT, 1) : 1; // ease in from zero
-          const amp = p.releaseAmt * rise * Math.exp(-age * PULSE_DECAY);
+          const amp = p.releaseAmt * rise * Math.exp(-age * (p.decay ?? PULSE_DECAY));
           if (Math.abs(amp) < 0.3) continue;
           const hw = (p.hw0 ?? PULSE_HW0) + age * 1.4;
           for (const cx of [p.pullX - PULSE_SPEED * age, p.pullX + PULSE_SPEED * age]) {
@@ -251,7 +251,7 @@ const {
         bowStates.forEach(st => {
           st.pulses = st.pulses.filter(p => {
             const age = wT - p.releaseT;
-            return Math.abs(p.releaseAmt * Math.exp(-age * PULSE_DECAY)) >= 0.3;
+            return Math.abs(p.releaseAmt * Math.exp(-age * (p.decay ?? PULSE_DECAY))) >= 0.3;
           });
         });
         wctx.clearRect(0, 0, wW, wH);
@@ -265,10 +265,10 @@ const {
       (window as any).triggerWaveRipple = () => {
         const ox = wW * 0.84; // directly below the sun (top-right)
         bowStates.forEach((st, i) => {
-          // Primary shockwave — fast deep press, very wide bell
-          st.pulses.push({ pullX: ox, releaseAmt: 95 + i * 15, releaseT: wT + i * 2, hw0: 650, riseT: 14 });
-          // Secondary trailing ripple — arrives ~0.45s later, narrower, spreads as echo
-          st.pulses.push({ pullX: ox, releaseAmt: 48 + i * 8, releaseT: wT + i * 2 + 27, hw0: 380, riseT: 10 });
+          // Primary shockwave — fast deep press, very wide bell (3× wider than original)
+          st.pulses.push({ pullX: ox, releaseAmt: 95 + i * 15, releaseT: wT + i * 2, hw0: 1950, riseT: 14 });
+          // Secondary trailing ripple — arrives ~0.45s later, also 3× wider
+          st.pulses.push({ pullX: ox, releaseAmt: 48 + i * 8, releaseT: wT + i * 2 + 27, hw0: 1140, riseT: 10 });
         });
       };
 
@@ -278,7 +278,7 @@ const {
         const ox = tidalDir > 0 ? -300 : wW + 300; // start off-screen left or right
         tidalDir = -tidalDir;
         bowStates.forEach((st, i) => {
-          st.pulses.push({ pullX: ox, releaseAmt: -(150 + i * 22), releaseT: wT + i * 4, hw0: 300, riseT: 22 });
+          st.pulses.push({ pullX: ox, releaseAmt: -(280 + i * 35), releaseT: wT + i * 4, hw0: 380, riseT: 22, decay: 0.00045 });
         });
       };
 
