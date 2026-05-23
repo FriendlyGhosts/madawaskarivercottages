@@ -857,15 +857,22 @@ const amenities = [
     }
 
     // Desktop gets bigger aurora waves; mobile is already nicely exaggerated by the smaller canvas
-    var aAmpScale = navigator.maxTouchPoints > 0 ? 1.0 : 2.2;
+    var aAmpScale = navigator.maxTouchPoints > 0 ? 1.0 : 2.9;
 
     // Gerstner y for a layer at position x and time t
+    // Peak-sharpening: compress mid-wave values so tips are pointier and troughs wider
     function aLayerY(layer, x, t) {
       var y = layer.yFrac * aH;
+      var raw = 0, maxA = 0;
       for (var j = 0; j < layer.comps.length; j++) {
         var c = layer.comps[j];
-        y += c[0] * aAmpScale * Math.sin((2 * Math.PI / aW) * c[1] * x + c[2] * t + c[3]);
+        raw  += c[0] * Math.sin((2 * Math.PI / aW) * c[1] * x + c[2] * t + c[3]);
+        maxA += c[0];
       }
+      // norm in [-1,1]; power 1.4 hollows mid-range → sharper peaks, wider troughs
+      var norm = raw / maxA;
+      var sharp = (norm >= 0 ? 1 : -1) * Math.pow(Math.abs(norm), 1.4);
+      y += sharp * maxA * aAmpScale;
       return y;
     }
 
@@ -962,7 +969,7 @@ const amenities = [
         actx.fill();
         actx.restore();
       }
-      aT = (performance.now() - aStartTime) * 0.06; // 60fps-equivalent ticks — frame-rate independent
+      aT = (performance.now() - aStartTime) * 0.069; // +15% speed vs baseline
       aAF = requestAnimationFrame(drawAurora);
     }
 
