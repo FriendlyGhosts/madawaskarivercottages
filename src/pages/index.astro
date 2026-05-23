@@ -600,51 +600,52 @@ const amenities = [
     if (!srCanvas || !sunEl) return;
     var srCtx = srCanvas.getContext('2d');
 
-    // Canvas logical size
-    var CS = 340;
-    var CS2 = CS / 2; // center
-
-    // Retina scaling
+    var CS = 340, CS2 = CS / 2;
     var dpr = window.devicePixelRatio || 1;
     srCanvas.width  = Math.round(CS * dpr);
     srCanvas.height = Math.round(CS * dpr);
     srCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    // 3 rings: base radius, angular wave components [[A, n, phi], ...]
     var rings = [
       { R: 68,  comps: [[3.5, 2, 0.0], [1.8, 3, 1.2], [1.0, 5, 0.6]] },
       { R: 104, comps: [[4.5, 2, 0.9], [2.2, 3, 2.1], [1.3, 4, 1.8]] },
       { R: 146, comps: [[5.5, 2, 1.7], [2.8, 3, 0.4], [1.6, 5, 2.9]] },
     ];
+    var BASE_R = [68, 104, 146];
 
-    // Per-ring bowstring state in angular domain
     var bowStates = rings.map(function() {
       return { engaged: false, theta: 0, pullAmt: 0, pulses: [] };
     });
 
-    var SR_ENGAGE_DIST = 13;  // px from ring surface
-    var SR_SNAP_DIST   = 50;  // px — snap threshold (higher = harder to trigger)
-    var SR_BOW_HW      = 0.50; // radians half-width of deformation (tighter)
-    var SR_PULL_SCALE  = 0.28; // dampen visual deformation
-    var SR_PULSE_SPEED = 0.022; // radians/frame
-    var SR_PULSE_DECAY = 0.0022;
-    var SR_PULSE_HW0   = 0.55;  // radians initial half-width
-    var NSR = 260; // segments per ring
+    var SR_ENGAGE_DIST = 13, SR_SNAP_DIST = 50, SR_BOW_HW = 0.50;
+    var SR_PULL_SCALE  = 0.28, SR_PULSE_SPEED = 0.022, SR_PULSE_DECAY = 0.0022;
+    var SR_PULSE_HW0   = 0.55, NSR = 260;
     var srT = 0;
 
-    // Angular difference normalized to [-π, π]
-    function angDiff(a, b) {
-      var d = ((a - b) % (2 * Math.PI) + 3 * Math.PI) % (2 * Math.PI) - Math.PI;
-      return d;
-    }
+    // ── Explosion state machine ───────────────────────────────────────────────
+    var EX_PHASE     = 0;   // 0=idle  1=compress  2=explode
+    var EX_T         = 0;
+    var COMPRESS_DUR = 82;
+    var EXPLODE_DUR  = 88;
 
-    // Squared cosine bell in angular domain
-    function angBell(dTheta, hw) {
-      if (Math.abs(dTheta) >= hw) return 0;
-      var b = 0.5 * (1 + Math.cos(Math.PI * dTheta / hw));
+    // Dense inner pressure rings: [startR, targetR, peakAlpha, lineWidth]
+    var INNER = [
+      [8,  52, 0.82, 2.4],
+      [18, 68, 0.64, 1.9],
+      [29, 85, 0.46, 1.5],
+    ];
+
+    // Exploding ring snapshots (filled at compress→explode transition)
+    var exRings = []; // { R, speed, alpha, width, night }
+
+    function angDiff(a, b) {
+      return ((a - b) % (2 * Math.PI) + 3 * Math.PI) % (2 * Math.PI) - Math.PI;
+    }
+    function angBell(dt, hw) {
+      if (Math.abs(dt) >= hw) return 0;
+      var b = 0.5 * (1 + Math.cos(Math.PI * dt / hw));
       return b * b;
     }
-
     function ringWaveR(ring, theta, t) {
       var r = ring.R;
       for (var j = 0; j < ring.comps.length; j++) {
@@ -653,12 +654,11 @@ const amenities = [
       }
       return r;
     }
-
     function bowDeformR(bow, theta, t) {
-      var result = 0;
+      var res = 0;
       if (bow.engaged && Math.abs(bow.pullAmt) >= 0.4) {
-        var dθ = angDiff(theta, bow.theta);
-        result += bow.pullAmt * SR_PULL_SCALE * angBell(dθ, SR_BOW_HW);
+        var d0 = angDiff(theta, bow.theta);
+        res += bow.pullAmt * SR_PULL_SCALE * angBell(d0, SR_BOW_HW);
       }
       for (var p = 0; p < bow.pulses.length; p++) {
         var pulse = bow.pulses[p];
@@ -666,81 +666,247 @@ const amenities = [
         var amp = pulse.releaseAmt * Math.exp(-age * SR_PULSE_DECAY);
         if (Math.abs(amp) < 0.25) continue;
         var hw = SR_PULSE_HW0 + age * 0.007;
-        var centers = [pulse.theta - SR_PULSE_SPEED * age, pulse.theta + SR_PULSE_SPEED * age];
+        var ctrs = [pulse.theta - SR_PULSE_SPEED * age, pulse.theta + SR_PULSE_SPEED * age];
         for (var ci = 0; ci < 2; ci++) {
-          var dθ2 = angDiff(theta, centers[ci]);
-          if (Math.abs(dθ2) < hw) result += amp * 0.65 * angBell(dθ2, hw);
+          var d2 = angDiff(theta, ctrs[ci]);
+          if (Math.abs(d2) < hw) res += amp * 0.65 * angBell(d2, hw);
         }
       }
-      return result;
+      return res;
+    }
+
+    // Draw a plain circle of radius r
+    function plainCircle(r, color, width) {
+      srCtx.beginPath();
+      for (var i = 0; i <= 200; i++) {
+        var theta = (i / 200) * 2 * Math.PI;
+        var x = CS2 + r * Math.cos(theta), y = CS2 + r * Math.sin(theta);
+        if (i === 0) srCtx.moveTo(x, y); else srCtx.lineTo(x, y);
+      }
+      srCtx.closePath();
+      srCtx.strokeStyle = color;
+      srCtx.lineWidth   = width;
+      srCtx.stroke();
     }
 
     function drawSunRings() {
       srCtx.clearRect(0, 0, CS, CS);
+      var isNight = document.documentElement.classList.contains('night');
 
-      // Prune dead pulses
-      bowStates.forEach(function(bow) {
-        bow.pulses = bow.pulses.filter(function(p) {
-          var age = srT - p.releaseT;
-          return Math.abs(p.releaseAmt * Math.exp(-age * SR_PULSE_DECAY)) >= 0.25;
+      // ── Phase 0: normal ──────────────────────────────────────────────────────
+      if (EX_PHASE === 0) {
+        bowStates.forEach(function(bow) {
+          bow.pulses = bow.pulses.filter(function(p) {
+            var age = srT - p.releaseT;
+            return Math.abs(p.releaseAmt * Math.exp(-age * SR_PULSE_DECAY)) >= 0.25;
+          });
         });
-      });
+        var dayA = [0.38, 0.26, 0.17], nightA = [0.28, 0.18, 0.11], wids = [1.6, 1.2, 0.9];
+        rings.forEach(function(ring, ri) {
+          var bow = bowStates[ri];
+          srCtx.beginPath();
+          var first = true;
+          for (var i = 0; i <= NSR; i++) {
+            var theta = (i / NSR) * 2 * Math.PI;
+            var r = ringWaveR(ring, theta, srT) + bowDeformR(bow, theta, srT);
+            var x = CS2 + r * Math.cos(theta), y = CS2 + r * Math.sin(theta);
+            if (first) { srCtx.moveTo(x, y); first = false; } else srCtx.lineTo(x, y);
+          }
+          srCtx.closePath();
+          var a = isNight ? nightA[ri] : dayA[ri];
+          srCtx.strokeStyle = isNight ? 'rgba(245,230,150,' + a + ')' : 'rgba(245,200,66,' + a + ')';
+          srCtx.lineWidth = wids[ri];
+          srCtx.stroke();
+        });
 
-      var isNight  = document.documentElement.classList.contains('night');
-      var dayA     = [0.38, 0.26, 0.17];
-      var nightA   = [0.28, 0.18, 0.11];
-      var widths   = [1.6,  1.2,  0.9];
+      // ── Phase 1: compress — inner rings press outer rings outward ────────────
+      } else if (EX_PHASE === 1) {
+        var prog  = EX_T / COMPRESS_DUR;
+        var ease  = prog * prog;
+        var push  = 24 * ease;
 
-      rings.forEach(function(ring, ri) {
-        var bow = bowStates[ri];
-        srCtx.beginPath();
-        var first = true;
-        for (var i = 0; i <= NSR; i++) {
-          var theta = (i / NSR) * 2 * Math.PI;
-          var r = ringWaveR(ring, theta, srT) + bowDeformR(bow, theta, srT);
-          var x = CS2 + r * Math.cos(theta);
-          var y = CS2 + r * Math.sin(theta);
-          if (first) { srCtx.moveTo(x, y); first = false; }
-          else srCtx.lineTo(x, y);
+        // Outer rings displaced outward and brightened
+        var bDA = [0.38, 0.26, 0.17], bNA = [0.28, 0.18, 0.11], bW = [1.6, 1.2, 0.9];
+        rings.forEach(function(ring, ri) {
+          ring.R = BASE_R[ri] + push * (1 + ri * 0.14);
+          var bow = bowStates[ri];
+          srCtx.beginPath();
+          var first2 = true;
+          for (var i = 0; i <= NSR; i++) {
+            var theta = (i / NSR) * 2 * Math.PI;
+            var r = ringWaveR(ring, theta, srT) + bowDeformR(bow, theta, srT);
+            var x = CS2 + r * Math.cos(theta), y = CS2 + r * Math.sin(theta);
+            if (first2) { srCtx.moveTo(x, y); first2 = false; } else srCtx.lineTo(x, y);
+          }
+          srCtx.closePath();
+          var baseA = isNight ? bNA[ri] : bDA[ri];
+          var a = baseA + prog * 0.28;
+          srCtx.strokeStyle = isNight ? 'rgba(255,240,160,' + a + ')' : 'rgba(255,215,80,' + a + ')';
+          srCtx.lineWidth   = bW[ri] * (1 + prog * 0.45);
+          srCtx.stroke();
+        });
+
+        // Inner pressure rings growing outward from the core
+        INNER.forEach(function(ir) {
+          var curR = ir[0] + (ir[1] - ir[0]) * prog;
+          var a    = ir[2] * (0.25 + 0.75 * prog);
+          plainCircle(curR, isNight ? 'rgba(255,245,155,' + a + ')' : 'rgba(255,220,75,' + a + ')', ir[3]);
+        });
+
+        EX_T++;
+        if (EX_T >= COMPRESS_DUR) {
+          // Snapshot all ring positions into exRings for the explode phase
+          var eA = [0.66, 0.52, 0.42], eW = [2.3, 1.7, 1.3];
+          exRings = [];
+          rings.forEach(function(ring, ri) {
+            exRings.push({ R: ring.R + 3, speed: 2.2 + ri * 1.3, alpha: eA[ri], width: eW[ri], night: isNight });
+            ring.R = BASE_R[ri]; // reset for when normal drawing resumes
+          });
+          INNER.forEach(function(ir, i) {
+            exRings.push({ R: ir[1] + 3, speed: 3.8 + i * 1.0, alpha: ir[2] * 0.85, width: ir[3] * 0.75, night: isNight });
+          });
+          EX_PHASE = 2; EX_T = 0;
+          triggerSkyEffects(isNight);
         }
-        srCtx.closePath();
-        var a = isNight ? nightA[ri] : dayA[ri];
-        srCtx.strokeStyle = isNight
-          ? ('rgba(245,230,150,' + a + ')')
-          : ('rgba(245,200,66,' + a + ')');
-        srCtx.lineWidth = widths[ri];
-        srCtx.stroke();
-      });
+
+      // ── Phase 2: explode — all rings fly outward and fade ────────────────────
+      } else if (EX_PHASE === 2) {
+        var prog2 = EX_T / EXPLODE_DUR;
+        exRings.forEach(function(er) {
+          er.R += er.speed * (1 + EX_T * 0.065);
+          var a = er.alpha * Math.pow(Math.max(0, 1 - prog2), 0.65);
+          if (a < 0.01) return;
+          plainCircle(er.R, er.night ? 'rgba(255,240,150,' + a + ')' : 'rgba(255,215,80,' + a + ')',
+            Math.max(0.5, er.width * (1 - prog2 * 0.55)));
+        });
+        EX_T++;
+        if (EX_T >= EXPLODE_DUR) {
+          EX_PHASE = 0; EX_T = 0; exRings = [];
+          rings.forEach(function(ring, ri) { ring.R = BASE_R[ri]; });
+        }
+      }
 
       srT++;
       requestAnimationFrame(drawSunRings);
     }
 
-    // Mouse → angular interaction
+    // ── Sky reddening + aurora canvas ─────────────────────────────────────────
+    function triggerSkyEffects(isNight) {
+      // Warm red-orange radial overlay — multiply-blends so content stays readable
+      var skyEl = document.createElement('div');
+      skyEl.style.cssText = [
+        'position:fixed', 'inset:0', 'z-index:40', 'pointer-events:none',
+        'background:radial-gradient(ellipse at 62% 28%,' +
+          (isNight ? 'rgba(200,28,8,0.52),rgba(140,12,4,0.26) 55%' : 'rgba(220,58,14,0.44),rgba(170,36,8,0.22) 55%') +
+          ',transparent 82%)',
+        'mix-blend-mode:multiply', 'opacity:0', 'transition:opacity 0.65s ease',
+      ].join(';');
+      document.body.appendChild(skyEl);
+      requestAnimationFrame(function() { requestAnimationFrame(function() { skyEl.style.opacity = '1'; }); });
+      setTimeout(function() {
+        skyEl.style.transition = 'opacity 1.8s ease';
+        skyEl.style.opacity = '0';
+      }, 3400);
+      setTimeout(function() { skyEl.parentNode && skyEl.parentNode.removeChild(skyEl); }, 5400);
+
+      // Aurora canvas — positioned top-left, rotated, screen-blended
+      var wrap = document.createElement('div');
+      wrap.style.cssText = [
+        'position:fixed', 'top:-22%', 'left:-18%', 'width:84vw', 'height:70vh',
+        'z-index:41', 'pointer-events:none',
+        'transform:rotate(-20deg)', 'transform-origin:50% 50%',
+        'opacity:0', 'transition:opacity 0.9s ease',
+      ].join(';');
+      document.body.appendChild(wrap);
+
+      var ac = document.createElement('canvas');
+      wrap.appendChild(ac);
+      ac.style.cssText = 'width:100%;height:100%;display:block;mix-blend-mode:screen;';
+      var W = Math.round(window.innerWidth  * 0.84);
+      var H = Math.round(window.innerHeight * 0.70);
+      var adpr = window.devicePixelRatio || 1;
+      ac.width  = Math.round(W * adpr);
+      ac.height = Math.round(H * adpr);
+      var actx = ac.getContext('2d');
+      actx.setTransform(adpr, 0, 0, adpr, 0, 0);
+
+      // Aurora bands: [yFrac, amp, r,g,b, peakAlpha, bandwidth, f1,f2, s1,s2, phase]
+      var bands = [
+        [0.14, 30, 60,220,130,  0.56, 26, 0.007,0.004, 0.015,0.009, 0.0],
+        [0.29, 24, 100,60,230,  0.44, 20, 0.005,0.003, 0.012,0.007, 1.1],
+        [0.44, 32, 30,200,210,  0.50, 24, 0.008,0.005, 0.017,0.010, 2.3],
+        [0.59, 19, 230,70,170,  0.37, 17, 0.006,0.004, 0.013,0.008, 0.7],
+        [0.72, 27, 70,140,255,  0.42, 22, 0.007,0.003, 0.014,0.009, 1.8],
+      ];
+      var aT = 0, aAF;
+
+      function drawAurora() {
+        actx.clearRect(0, 0, W, H);
+        bands.forEach(function(b) {
+          var yC = b[0] * H, amp = b[1];
+          var rv = b[2], gv = b[3], bv = b[4];
+          var pA = b[5], bw = b[6];
+          var f1 = b[7], f2 = b[8], s1 = b[9], s2 = b[10], ph = b[11];
+          // Three passes: bright core, inner glow, outer haze
+          [[pA, bw], [pA * 0.48, bw * 2.0], [pA * 0.20, bw * 4.0]].forEach(function(pass) {
+            actx.beginPath();
+            for (var x = 0; x <= W; x += 3) {
+              var y = yC + amp * Math.sin(x * f1 + aT * s1 + ph)
+                         + amp * 0.38 * Math.sin(x * f2 + aT * s2 + ph * 1.7);
+              if (x === 0) actx.moveTo(x, y); else actx.lineTo(x, y);
+            }
+            actx.strokeStyle = 'rgba(' + rv + ',' + gv + ',' + bv + ',' + pass[0] + ')';
+            actx.lineWidth   = pass[1];
+            actx.lineCap     = 'round';
+            actx.stroke();
+          });
+        });
+        aT++;
+        aAF = requestAnimationFrame(drawAurora);
+      }
+
+      requestAnimationFrame(function() { requestAnimationFrame(function() {
+        wrap.style.opacity = '0.90';
+        drawAurora();
+      }); });
+
+      setTimeout(function() {
+        wrap.style.transition = 'opacity 1.5s ease';
+        wrap.style.opacity    = '0';
+        setTimeout(function() {
+          cancelAnimationFrame(aAF);
+          if (wrap.parentNode) wrap.parentNode.removeChild(wrap);
+        }, 1600);
+      }, 6000);
+    }
+
+    // ── Expose trigger to the global scope ───────────────────────────────────
+    window.triggerSunExplosion = function() {
+      if (EX_PHASE !== 0) return;
+      EX_PHASE = 1; EX_T = 0;
+      bowStates.forEach(function(bow) { bow.engaged = false; bow.pullAmt = 0; });
+    };
+
+    // ── Mouse / ring bowstring interaction (idle only) ───────────────────────
     document.addEventListener('mousemove', function(e) {
+      if (EX_PHASE !== 0) return;
       var rect = sunEl.getBoundingClientRect();
       var cx = rect.left + rect.width  / 2;
       var cy = rect.top  + rect.height / 2;
-      var dx = e.clientX - cx;
-      var dy = e.clientY - cy;
+      var dx = e.clientX - cx, dy = e.clientY - cy;
       var dist = Math.sqrt(dx * dx + dy * dy);
       var theta = Math.atan2(dy, dx);
-
       rings.forEach(function(ring, ri) {
         var bow = bowStates[ri];
-        var distFromRing = Math.abs(dist - ring.R);
+        var dfr = Math.abs(dist - ring.R);
         if (bow.engaged) {
-          bow.theta   = theta;
-          bow.pullAmt = dist - ring.R;
+          bow.theta = theta; bow.pullAmt = dist - ring.R;
           if (Math.abs(bow.pullAmt) >= SR_SNAP_DIST) {
             bow.pulses.push({ theta: bow.theta, releaseAmt: bow.pullAmt * SR_PULL_SCALE, releaseT: srT });
-            bow.engaged = false;
-            bow.pullAmt = 0;
+            bow.engaged = false; bow.pullAmt = 0;
           }
-        } else if (distFromRing <= SR_ENGAGE_DIST) {
-          bow.engaged = true;
-          bow.theta   = theta;
-          bow.pullAmt = 0;
+        } else if (dfr <= SR_ENGAGE_DIST) {
+          bow.engaged = true; bow.theta = theta; bow.pullAmt = 0;
         }
       });
     });
@@ -854,7 +1020,21 @@ const amenities = [
   </script>
 
   <script>
-    // ── Zen mode easter egg — triple-click the sun or moon ──
+    // ── Sun: triple-click → solar explosion ──────────────────────────────────
+    let _sc = 0, _st: ReturnType<typeof setTimeout> | null = null;
+    function _sunClick() {
+      _sc++;
+      if (_st) clearTimeout(_st);
+      if (_sc >= 3) {
+        _sc = 0;
+        (window as any).triggerSunExplosion?.();
+      } else {
+        _st = setTimeout(() => { _sc = 0; }, 500);
+      }
+    }
+    document.getElementById('sun')?.addEventListener('click', _sunClick);
+
+    // ── Moon: triple-click → zen mode ────────────────────────────────────────
     let _zc = 0, _zt: ReturnType<typeof setTimeout> | null = null;
     function _zen() {
       _zc++;
@@ -866,7 +1046,6 @@ const amenities = [
         _zt = setTimeout(() => { _zc = 0; }, 500);
       }
     }
-    document.getElementById('sun')?.addEventListener('click', _zen);
     document.getElementById('moon')?.addEventListener('click', _zen);
   </script>
 
