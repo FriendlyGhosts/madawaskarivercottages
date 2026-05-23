@@ -595,6 +595,8 @@ const amenities = [
 
   <script is:inline>
   (function() {
+    // Sun rings, aurora, and zen mode are desktop-only — skip entirely on touch devices
+    if (navigator.maxTouchPoints > 0) return;
     // ══════════════════════════════════════════════════════════════════════════
     // SUN RINGS
     // ══════════════════════════════════════════════════════════════════════════
@@ -1248,6 +1250,8 @@ const amenities = [
     // ── Sun: triple-click → toggle zen mode ──────────────────────────────────
     // Entering zen: triggers the solar explosion + sky reddening + aurora
     // Exiting zen:  clears sky + aurora, restores normal view
+    // On mobile the sun IIFE exits early so triggerSunExplosion/clearSkyEffects
+    // are never defined — the optional-chain calls below safely no-op.
     let _sc = 0, _st: ReturnType<typeof setTimeout> | null = null;
     function _sunClick() {
       _sc++;

@@ -115,7 +115,7 @@ const {
       ];
 
       // Per-layer bowstring state — supports multiple concurrent pulses
-      interface Pulse { pullX: number; releaseAmt: number; releaseT: number; hw0?: number; riseT?: number; decay?: number; }
+      interface Pulse { pullX: number; releaseAmt: number; releaseT: number; hw0?: number; riseT?: number; decay?: number; speed?: number; }
       interface BowState { engaged: boolean; pullX: number; pullAmt: number; pulses: Pulse[]; }
       const bowStates: BowState[] = gLayers.map(() => ({
         engaged: false, pullX: 0, pullAmt: 0, pulses: [],
@@ -158,12 +158,34 @@ const {
           const amp = p.releaseAmt * rise * Math.exp(-age * (p.decay ?? PULSE_DECAY));
           if (Math.abs(amp) < 0.3) continue;
           const hw = (p.hw0 ?? PULSE_HW0) + age * 1.4;
-          for (const cx of [p.pullX - PULSE_SPEED * age, p.pullX + PULSE_SPEED * age]) {
+          const pSpeed = p.speed ?? PULSE_SPEED;
+          for (const cx of [p.pullX - pSpeed * age, p.pullX + pSpeed * age]) {
             const dx = x - cx;
             if (Math.abs(dx) < hw) result += amp * 0.7 * bell(dx, hw);
           }
         }
 
+        return result;
+      }
+
+      // Pulse-only deformation — used for the interaction surface hit-test so the
+      // engaged-pull doesn't feed back into the surface it's measuring. Without this,
+      // surf ≈ my for all engaged layers → they visually cluster at the cursor, and
+      // any mouse movement causes a snap/oscillation (new_pullAmt = D - old_pullAmt).
+      function bowDeformPulses(st: BowState, x: number, t: number): number {
+        let result = 0;
+        for (const p of st.pulses) {
+          const age = t - p.releaseT;
+          const rise = p.riseT ? Math.min(age / p.riseT, 1) : 1;
+          const amp = p.releaseAmt * rise * Math.exp(-age * (p.decay ?? PULSE_DECAY));
+          if (Math.abs(amp) < 0.3) continue;
+          const hw = (p.hw0 ?? PULSE_HW0) + age * 1.4;
+          const pSpeed = p.speed ?? PULSE_SPEED;
+          for (const cx of [p.pullX - pSpeed * age, p.pullX + pSpeed * age]) {
+            const dx = x - cx;
+            if (Math.abs(dx) < hw) result += amp * 0.7 * bell(dx, hw);
+          }
+        }
         return result;
       }
 
@@ -192,11 +214,14 @@ const {
         wctx.fill();
       }
 
-      // Shared wave interaction — used by both mouse and touch
+      // Shared wave interaction — mouse and touch
       function handleWaveInteraction(mx: number, my: number) {
+        // On mobile, limit to one NEW engagement per frame so a large pulse doesn't
+        // grab every band simultaneously via a single touch point.
+        let mobileEngaged = false;
         gLayers.forEach((gl, i) => {
           const st = bowStates[i];
-          const surf = gl.baseRatio * wH + compY(gl, mx, wT) + bowDeform(st, mx, wT);
+          const surf = gl.baseRatio * wH + compY(gl, mx, wT) + bowDeformPulses(st, mx, wT);
           if (st.engaged) {
             st.pullX   = mx;
             st.pullAmt = my - surf;
@@ -207,7 +232,9 @@ const {
               st.pullAmt = 0;
             }
           } else if (Math.abs(my - surf) <= ENGAGE_DIST) {
+            if (isTouchDevice && mobileEngaged) return;
             st.engaged = true; st.pullX = mx; st.pullAmt = 0;
+            if (isTouchDevice) mobileEngaged = true;
           }
         });
       }
@@ -220,7 +247,7 @@ const {
         lastMX = e.clientX;
       });
 
-      // Touch — finger acts as an invisible cursor, same bowstring mechanic as mouse
+      // Touch — same bowstring mechanic as mouse
       let lastTX = -1, lastTY = -1;
 
       document.addEventListener('touchstart', (e) => {
@@ -278,7 +305,7 @@ const {
         const ox = tidalDir > 0 ? -300 : wW + 300; // start off-screen left or right
         tidalDir = -tidalDir;
         bowStates.forEach((st, i) => {
-          st.pulses.push({ pullX: ox, releaseAmt: -(280 + i * 35), releaseT: wT + i * 4, hw0: 380, riseT: 22, decay: 0.00045 });
+          st.pulses.push({ pullX: ox, releaseAmt: -(280 + i * 35), releaseT: wT + i * 4, hw0: 380, riseT: 22, decay: 0.000225 });
         });
       };
 
