@@ -818,7 +818,7 @@ const amenities = [
     }
 
     // ── Aurora state (Gerstner waves, interactive, persists during zen mode) ──
-    var skyEl = null, darkEl = null, aCanvas = null, aAF = null, auroraActive = false;
+    var skyEl = null, aCanvas = null, aAF = null, auroraActive = false;
     var aW = 0, aH = 0, aT = 0;
 
     // 5 aurora layers — each has a unique fill colour, Gerstner components, and bowstring state
@@ -951,21 +951,10 @@ const amenities = [
     function triggerSkyEffects(isNight) {
       // Tear down any remnants
       if (skyEl   && skyEl.parentNode)   { skyEl.parentNode.removeChild(skyEl);     skyEl   = null; }
-      if (darkEl  && darkEl.parentNode)  { darkEl.parentNode.removeChild(darkEl);   darkEl  = null; }
       if (aCanvas && aCanvas.parentNode) { aCanvas.parentNode.removeChild(aCanvas); aCanvas = null; }
       if (aAF) { cancelAnimationFrame(aAF); aAF = null; }
       auroraActive = false;
 
-      // Dark backdrop — lets screen-blend aurora glow rather than wash white on parchment
-      darkEl = document.createElement('div');
-      darkEl.style.cssText = [
-        'position:fixed', 'top:0', 'left:0', 'width:100vw', 'height:55vh',
-        'z-index:38', 'pointer-events:none',
-        'background:linear-gradient(to bottom,rgba(4,8,28,0.54) 0%,rgba(4,8,28,0.54) 40%,rgba(4,8,28,0.18) 68%,transparent 100%)',
-        'opacity:0', 'transition:opacity 1.6s ease',
-      ].join(';');
-      document.body.appendChild(darkEl);
-      requestAnimationFrame(function() { requestAnimationFrame(function() { darkEl.style.opacity = '1'; }); });
 
       // Solar flare flash — bright orange burst that fades back to normal sky
       skyEl = document.createElement('div');
@@ -1022,12 +1011,6 @@ const amenities = [
         skyEl.style.opacity = '0';
         var _s = skyEl; skyEl = null;
         setTimeout(function() { _s.parentNode && _s.parentNode.removeChild(_s); }, 1500);
-      }
-      if (darkEl) {
-        darkEl.style.transition = 'opacity 1.4s ease';
-        darkEl.style.opacity = '0';
-        var _d = darkEl; darkEl = null;
-        setTimeout(function() { _d.parentNode && _d.parentNode.removeChild(_d); }, 1500);
       }
       if (aCanvas) {
         auroraActive = false;
