@@ -730,14 +730,16 @@ const amenities = [
         var ease  = prog * prog * prog; // cubic — pressure crawls, then surges
         var push  = 30 * ease;
 
-        // Sun colour: darken→deep orange (first 50%), then supernova brighten (last 50%)
+        // Sun colour: orange pressure build (first 50%), then supernova flash (last 50%)
+        // brightness never dips below 0.74 — deep orange, never gray or black
         if (sunDisk) {
           if (prog < 0.50) {
             var dp = prog / 0.50;
-            sunDisk.style.filter = 'brightness(' + (1 - dp * 0.48) + ') sepia(' + (dp * 0.95) + ') saturate(1.8) hue-rotate(' + (dp * 18) + 'deg)';
+            var dpE = dp * dp * dp; // cubic — slow start, surges to match ring pressure
+            sunDisk.style.filter = 'brightness(' + (1 - dpE * 0.26) + ') sepia(' + (dpE * 0.95) + ') saturate(1.8)';
           } else {
             var bp = (prog - 0.50) / 0.50;
-            sunDisk.style.filter = 'brightness(' + (0.52 + bp * 4.5) + ') sepia(' + (0.95 * (1 - bp)) + ') saturate(' + (1.8 - bp * 0.8) + ')';
+            sunDisk.style.filter = 'brightness(' + (0.74 + bp * 4.26) + ') sepia(' + (0.95 * (1 - bp)) + ') saturate(' + (1.8 - bp * 0.8) + ')';
           }
         }
 
@@ -957,7 +959,8 @@ const amenities = [
       // Dark backdrop — lets screen-blend aurora glow rather than wash white on parchment
       darkEl = document.createElement('div');
       darkEl.style.cssText = [
-        'position:fixed', 'inset:0', 'z-index:38', 'pointer-events:none',
+        'position:fixed', 'top:0', 'left:0', 'width:100vw', 'height:60vh',
+        'z-index:38', 'pointer-events:none',
         'background:rgba(4,8,28,0.52)', 'opacity:0', 'transition:opacity 1.6s ease',
       ].join(';');
       document.body.appendChild(darkEl);

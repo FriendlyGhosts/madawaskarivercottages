@@ -114,7 +114,7 @@ const {
       ];
 
       // Per-layer bowstring state — supports multiple concurrent pulses
-      interface Pulse { pullX: number; releaseAmt: number; releaseT: number; }
+      interface Pulse { pullX: number; releaseAmt: number; releaseT: number; hw0?: number; }
       interface BowState { engaged: boolean; pullX: number; pullAmt: number; pulses: Pulse[]; }
       const bowStates: BowState[] = gLayers.map(() => ({
         engaged: false, pullX: 0, pullAmt: 0, pulses: [],
@@ -155,7 +155,7 @@ const {
           const age = t - p.releaseT;
           const amp = p.releaseAmt * Math.exp(-age * PULSE_DECAY);
           if (Math.abs(amp) < 0.3) continue;
-          const hw = PULSE_HW0 + age * 1.4;
+          const hw = (p.hw0 ?? PULSE_HW0) + age * 1.4;
           for (const cx of [p.pullX - PULSE_SPEED * age, p.pullX + PULSE_SPEED * age]) {
             const dx = x - cx;
             if (Math.abs(dx) < hw) result += amp * 0.7 * bell(dx, hw);
@@ -261,10 +261,10 @@ const {
 
       // Expose wave ripple so solar explosion can disturb the river
       (window as any).triggerWaveRipple = () => {
-        const ox = wW * 0.80; // origin near top-right (sun side)
+        const ox = wW * 0.68; // origin roughly center — shockwave spreads outward
         bowStates.forEach((st, i) => {
-          // Stagger slightly so the shockwave has a rolling feel
-          st.pulses.push({ pullX: ox, releaseAmt: -(58 + i * 10), releaseT: wT + i * 2 });
+          // Downward press (positive = down) with wide bell — water pressed by sun force
+          st.pulses.push({ pullX: ox, releaseAmt: 72 + i * 12, releaseT: wT + i * 2, hw0: 450 });
         });
       };
 
