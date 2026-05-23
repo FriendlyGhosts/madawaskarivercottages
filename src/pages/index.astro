@@ -172,7 +172,7 @@ const amenities = [
 <Layout>
   <!-- Sun, moon, rings — direct body children so zen mode can keep them visible -->
   <div id="sun-rings-wrap" style="position:fixed;top:12%;right:14%;z-index:2;overflow:visible;pointer-events:none;width:90px;height:90px;">
-    <canvas id="sun-rings-canvas" style="position:absolute;width:340px;height:340px;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;"></canvas>
+    <canvas id="sun-rings-canvas" style="position:absolute;width:800px;height:800px;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;"></canvas>
   </div>
   <div id="sun" style="position:fixed;top:12%;right:14%;z-index:2;cursor:pointer;">
     <div style="width:90px;height:90px;border-radius:50%;background:#f5c842;opacity:0.5;box-shadow:0 0 40px 16px rgba(245,200,66,0.22),0 0 80px 40px rgba(245,200,66,0.09);"></div>
@@ -604,7 +604,7 @@ const amenities = [
     if (!srCanvas || !sunEl) return;
     var srCtx = srCanvas.getContext('2d');
 
-    var CS = 340, CS2 = CS / 2;
+    var CS = 800, CS2 = CS / 2;
     var dpr = window.devicePixelRatio || 1;
     srCanvas.width  = Math.round(CS * dpr);
     srCanvas.height = Math.round(CS * dpr);
@@ -737,8 +737,8 @@ const amenities = [
 
         // Vibration ramps up in the final stretch — pressure-cooker shudder
         var vProg  = EX_T >= VIBRATE_START ? (EX_T - VIBRATE_START) / (COMPRESS_DUR - VIBRATE_START) : 0;
-        var vibAmp = vProg * 9;                     // grows 0→9px
-        var vibHz  = 0.22 + vProg * 1.40;           // temporal frequency ramps up
+        var vibAmp = vProg * 7;                     // grows 0→7px
+        var vibHz  = 0.18 + vProg * 1.10;           // temporal frequency ramps up
 
         // Outer rings displaced outward, brightened, and shuddering
         var bDA = [0.72, 0.50, 0.34], bNA = [0.58, 0.38, 0.24], bW = [2.8, 2.0, 1.4];
@@ -749,12 +749,11 @@ const amenities = [
           var first2 = true;
           for (var i = 0; i <= NSR; i++) {
             var theta = (i / NSR) * 2 * Math.PI;
-            // Spatially-varied trembling: multiple angular modes overlap so each point
-            // on the ring shudders independently — no uniform pulsing
+            // Fine high-frequency trembling — many small bumps around the ring
+            // rather than low polygon modes (2x/3x) that look like shape-morphing
             var vib = vibAmp * (
-              Math.sin(srT * vibHz       + theta * 2 + ri * 1.30) * 0.50 +
-              Math.sin(srT * vibHz * 1.4 + theta * 3 + ri * 0.85) * 0.32 +
-              Math.sin(srT * vibHz * 0.7 + theta * 5 + ri * 1.70) * 0.18
+              Math.sin(srT * vibHz       + theta * 8  + ri * 1.30) * 0.55 +
+              Math.sin(srT * vibHz * 1.5 + theta * 13 + ri * 0.80) * 0.45
             );
             var r = ringWaveR(ring, theta, srT) + bowDeformR(bow, theta, srT) + vib;
             var x = CS2 + r * Math.cos(theta), y = CS2 + r * Math.sin(theta);
@@ -798,10 +797,11 @@ const amenities = [
         EX_T = performance.now() - EX_PHASE_START;
         var prog2 = Math.min(EX_T / EXPLODE_DUR, 1);
         exRings.forEach(function(er) {
-          // Frame-rate independent expansion: R is a pure function of prog2
-          // Matches the old 60fps quadratic acceleration (speed * 88 frames * parabolic curve)
           er.R = er.startR + er.speed * 87 * prog2 * (1 + 2.86 * prog2);
           var a = er.alpha * Math.pow(Math.max(0, 1 - prog2), 0.65);
+          // Fade out as rings approach the canvas edge — no hard clip
+          var edgeFade = er.R < CS2 * 0.68 ? 1 : Math.max(0, 1 - (er.R - CS2 * 0.68) / (CS2 * 0.32));
+          a *= edgeFade;
           if (a < 0.01) return;
           plainCircle(er.R, er.night ? 'rgba(255,240,150,' + a + ')' : 'rgba(255,215,80,' + a + ')',
             Math.max(0.5, er.width * (1 - prog2 * 0.55)));
