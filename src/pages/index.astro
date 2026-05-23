@@ -832,7 +832,7 @@ const amenities = [
     }
 
     // Cascade intro — each band slides down from above into its resting position
-    var INTRO_DUR = 90, INTRO_STAGGER = 9; // frames
+    var INTRO_DUR = 150, INTRO_STAGGER = 45; // frames — 2.5s travel, 0.75s between bands
     function aIntroOffset(li) {
       var start = li * INTRO_STAGGER;
       if (aT < start) return -aH * 0.55; // waiting — hidden above canvas
