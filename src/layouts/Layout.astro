@@ -218,15 +218,17 @@ const {
       }
 
       // Snap-release helper — pushes a small, fast-decaying pulse with amplitude
-      // compensated so visual stays continuous across the held → pulse transition.
-      // Sets a brief cooldown so the band can't immediately re-engage and snap again,
-      // which would stack pulses at the same x and visually multiply the amplitude.
+      // AND width matched to the held bell so the deformation doesn't visibly
+      // "teleport" wider at the snap moment. Sets a brief cooldown so the band
+      // can't immediately re-engage and snap again, which would stack pulses
+      // at the same x and visually multiply the amplitude.
       function releaseSnap(st: BowState, snapAmt: number) {
         st.pulses.push({
           pullX: st.pullX,
           releaseAmt: snapAmt * RELEASE_FACTOR,
           releaseT: wT,
           decay: USER_PULSE_DECAY,
+          hw0: BOW_HW,                  // start at the same width as the engaged bell — no width jump
         });
         st.engaged = false;
         st.pullAmt = 0;
