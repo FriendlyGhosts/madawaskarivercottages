@@ -122,7 +122,7 @@ const {
       }));
       const isTouchDevice = navigator.maxTouchPoints > 0;
       const ENGAGE_DIST = isTouchDevice ? 22 : 11;
-      const SNAP_DIST   = isTouchDevice ? 28 : 62;
+      const SNAP_DIST   = isTouchDevice ? 28 : 120; // 120 compensates for removing the bowDeform feedback loop (old effective snap was ~2× pullAmt travel)
       const BOW_HW      = 85;
 
       const PULSE_SPEED = 2.2;
@@ -221,7 +221,7 @@ const {
         let mobileEngaged = false;
         gLayers.forEach((gl, i) => {
           const st = bowStates[i];
-          const surf = gl.baseRatio * wH + compY(gl, mx, wT) + bowDeform(st, mx, wT);
+          const surf = gl.baseRatio * wH + compY(gl, mx, wT) + bowDeformPulses(st, mx, wT);
           if (st.engaged) {
             st.pullX   = mx;
             st.pullAmt = my - surf;
