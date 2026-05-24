@@ -872,14 +872,20 @@ const amenities = [
     // comps: [amplitude, wavenumber-k, speed, phase-offset]
     // fill: drawn bottom-to-top so each band peeks out between the wave lines above it
     var aLayers = [
-      {yFrac:0.08, fill:'rgba(110,225,155,0.38)',  comps:[[18,1.8,0.006,0.0],[9,2.9,0.004,1.1],[5,4.1,0.003,2.3]], engaged:false, engX:0, pullAmt:0, pulses:[]},
-      {yFrac:0.15, fill:'rgba(170,110,240,0.36)',  comps:[[15,2.1,0.007,0.7],[8,3.4,0.005,1.8],[4,5.0,0.003,0.4]], engaged:false, engX:0, pullAmt:0, pulses:[]},
-      {yFrac:0.22, fill:'rgba(90,205,220,0.38)',   comps:[[20,1.6,0.005,1.5],[10,2.7,0.004,2.2],[6,4.3,0.003,0.9]], engaged:false, engX:0, pullAmt:0, pulses:[]},
-      {yFrac:0.29, fill:'rgba(225,100,185,0.34)',  comps:[[12,2.3,0.008,2.0],[6,3.8,0.005,0.3],[4,5.5,0.003,1.4]], engaged:false, engX:0, pullAmt:0, pulses:[]},
-      {yFrac:0.36, fill:'rgba(120,140,235,0.36)',  comps:[[17,1.9,0.006,0.8],[8,3.1,0.004,1.6],[5,4.7,0.003,2.7]], engaged:false, engX:0, pullAmt:0, pulses:[]},
+      {yFrac:0.08, fill:'rgba(110,225,155,0.38)',  comps:[[18,1.8,0.006,0.0],[9,2.9,0.004,1.1],[5,4.1,0.003,2.3]], engaged:false, engX:0, pullAmt:0, pulses:[], cooldownUntil:0},
+      {yFrac:0.15, fill:'rgba(170,110,240,0.36)',  comps:[[15,2.1,0.007,0.7],[8,3.4,0.005,1.8],[4,5.0,0.003,0.4]], engaged:false, engX:0, pullAmt:0, pulses:[], cooldownUntil:0},
+      {yFrac:0.22, fill:'rgba(90,205,220,0.38)',   comps:[[20,1.6,0.005,1.5],[10,2.7,0.004,2.2],[6,4.3,0.003,0.9]], engaged:false, engX:0, pullAmt:0, pulses:[], cooldownUntil:0},
+      {yFrac:0.29, fill:'rgba(225,100,185,0.34)',  comps:[[12,2.3,0.008,2.0],[6,3.8,0.005,0.3],[4,5.5,0.003,1.4]], engaged:false, engX:0, pullAmt:0, pulses:[], cooldownUntil:0},
+      {yFrac:0.36, fill:'rgba(120,140,235,0.36)',  comps:[[17,1.9,0.006,0.8],[8,3.1,0.004,1.6],[5,4.7,0.003,2.7]], engaged:false, engX:0, pullAmt:0, pulses:[], cooldownUntil:0},
     ];
     var A_ENGAGE_DIST = 28, A_SNAP_DIST = 65;
     var A_PULL_SCALE  = 0.35, A_PULSE_SPEED = 3.5, A_PULSE_DECAY = 0.008;
+    // Amp compensation: held visual = pullAmt * A_PULL_SCALE; released visual at age=0 = releaseAmt * 0.55 * 2.
+    // Match the two so there's no spike at snap.
+    var A_RELEASE_FACTOR    = A_PULL_SCALE / 1.1;
+    var A_USER_PULSE_DECAY  = 0.014;  // ~1.75× faster fade than tidal/explosion default — cleaner ripples
+    var A_SNAP_COOLDOWN_AT  = 8;       // ≈115ms in aT units (aT advances at ms × 0.069)
+    var A_BELL_HW_FRAC      = 0.30;    // engaged bell width fraction — also used as snap pulse's starting width
     var A_TILT = 0.72; // total upward shift across the drawing width
 
     // Curved arch: gentle at left, steepens toward right
@@ -930,7 +936,7 @@ const amenities = [
       var res = 0;
       if (layer.engaged) {
         var dx = x - layer.engX;
-        var hw = aW * 0.30;
+        var hw = aW * A_BELL_HW_FRAC;
         if (Math.abs(dx) < hw) {
           var b = 0.5 + 0.5 * Math.cos(Math.PI * dx / hw);
           res += layer.pullAmt * A_PULL_SCALE * b * b;
@@ -939,9 +945,11 @@ const amenities = [
       for (var p = 0; p < layer.pulses.length; p++) {
         var pulse = layer.pulses[p];
         var age = aT - pulse.releaseT;
-        var amp = pulse.releaseAmt * Math.exp(-age * A_PULSE_DECAY);
+        var pDecay = pulse.decay || A_PULSE_DECAY;
+        var amp = pulse.releaseAmt * Math.exp(-age * pDecay);
         if (Math.abs(amp) < 0.5) continue;
-        var hw2 = aW * 0.07 + age * A_PULSE_SPEED;
+        var baseHw = pulse.initHw || (aW * 0.07);
+        var hw2 = baseHw + age * A_PULSE_SPEED;
         var ctrs = [pulse.releaseX - A_PULSE_SPEED * age, pulse.releaseX + A_PULSE_SPEED * age];
         for (var ci = 0; ci < 2; ci++) {
           var d2 = x - ctrs[ci];
@@ -954,41 +962,61 @@ const amenities = [
       return res;
     }
 
-    // Engage / snap aurora layers based on cursor position
+    // Snap-release helper — amplitude compensated for the *0.55*2 split (no visual spike)
+    // and starting width matched to the engaged bell (no visual width jump). Also sets a
+    // brief cooldown so the same layer can't immediately re-engage and stack pulses.
+    function releaseAuroraSnap(layer) {
+      layer.pulses.push({
+        releaseX: layer.engX,
+        releaseAmt: layer.pullAmt * A_RELEASE_FACTOR,
+        releaseT: aT,
+        initHw: aW * A_BELL_HW_FRAC,
+        decay: A_USER_PULSE_DECAY,
+      });
+      layer.engaged = false;
+      layer.pullAmt = 0;
+      layer.cooldownUntil = aT + A_SNAP_COOLDOWN_AT;
+    }
+
+    // Engage / snap aurora layers based on cursor position — single layer at a time,
+    // clamped pull magnitude, and gentle release on either snap or band-switch.
     function updateAuroraInteraction(mx, my) {
       if (!auroraActive) return;
-      aLayers.forEach(function(layer) {
+      // Pass 1: find the closest layer (by visual distance to its current natural surface)
+      var closestIdx = -1, closestDist = Infinity;
+      var dists = [];
+      aLayers.forEach(function(layer, i) {
+        var d = Math.abs(my - aLayerY(layer, mx, aT) - aTiltY(mx));
+        dists.push(d);
+        if (d < closestDist) { closestDist = d; closestIdx = i; }
+      });
+      aLayers.forEach(function(layer, i) {
         if (layer.engaged) {
-          layer.engX    = mx;
-          layer.pullAmt = my - layer.yFrac * aH - aTiltY(mx);
-          if (Math.abs(layer.pullAmt) >= A_SNAP_DIST) {
-            layer.pulses.push({ releaseX: mx, releaseAmt: layer.pullAmt, releaseT: aT });
-            layer.engaged = false; layer.pullAmt = 0;
-          }
-        } else {
-          var dist = Math.abs(my - aLayerY(layer, mx, aT) - aTiltY(mx));
-          if (dist <= A_ENGAGE_DIST) { layer.engaged = true; layer.engX = mx; layer.pullAmt = 0; }
+          if (i !== closestIdx) { releaseAuroraSnap(layer); return; }
+          layer.engX = mx;
+          var rawPull = my - layer.yFrac * aH - aTiltY(mx);
+          // Clamp so a fast move can't spawn a giant pulse on snap
+          layer.pullAmt = Math.max(-A_SNAP_DIST, Math.min(A_SNAP_DIST, rawPull));
+          if (Math.abs(rawPull) >= A_SNAP_DIST) releaseAuroraSnap(layer);
+        } else if (i === closestIdx && closestDist <= A_ENGAGE_DIST && aT >= layer.cooldownUntil) {
+          layer.engaged = true; layer.engX = mx; layer.pullAmt = 0;
         }
       });
     }
 
-    // Release any engaged aurora layers with a pulse on mouse-up / touch-end
+    // Release any engaged aurora layers gently on mouse-up / touch-end
     function snapAuroraLayers() {
       if (!auroraActive) return;
-      aLayers.forEach(function(layer) {
-        if (layer.engaged) {
-          layer.pulses.push({ releaseX: layer.engX, releaseAmt: layer.pullAmt, releaseT: aT });
-          layer.engaged = false; layer.pullAmt = 0;
-        }
-      });
+      aLayers.forEach(function(layer) { if (layer.engaged) releaseAuroraSnap(layer); });
     }
 
     function drawAurora() {
       if (!auroraActive || !aCanvas) return;
-      // Expire old pulses
+      // Expire old pulses (per-pulse decay so user-snap pulses fade on their own faster timer)
       aLayers.forEach(function(layer) {
         layer.pulses = layer.pulses.filter(function(p) {
-          return Math.abs(p.releaseAmt * Math.exp(-(aT - p.releaseT) * A_PULSE_DECAY)) >= 0.5;
+          var pDecay = p.decay || A_PULSE_DECAY;
+          return Math.abs(p.releaseAmt * Math.exp(-(aT - p.releaseT) * pDecay)) >= 0.5;
         });
       });
       var actx = aCanvas.getContext('2d');
