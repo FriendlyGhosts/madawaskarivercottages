@@ -122,7 +122,7 @@ const {
       }));
       const isTouchDevice = navigator.maxTouchPoints > 0;
       const ENGAGE_DIST = isTouchDevice ? 22 : 11;
-      const SNAP_DIST   = isTouchDevice ? 28 : 120; // 120 compensates for removing the bowDeform feedback loop (old effective snap was ~2× pullAmt travel)
+      const SNAP_DIST   = isTouchDevice ? 28 : 62;
       const BOW_HW      = 85;
 
       const PULSE_SPEED = 2.2;
