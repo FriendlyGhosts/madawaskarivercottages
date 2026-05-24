@@ -826,16 +826,30 @@ const amenities = [
         var RESET_DUR = 1400, RESET_STAGGER = 120; // ms
         var dayA3 = [0.72, 0.50, 0.34], nightA3 = [0.58, 0.38, 0.24], wids3 = [2.8, 2.0, 1.4];
         var allDone = true;
+        // Prune dead bow pulses just like Phase 0 — keeps cursor interaction live during reset
+        bowStates.forEach(function(bow) {
+          bow.pulses = bow.pulses.filter(function(p) {
+            var age = srT - p.releaseT;
+            return Math.abs(p.releaseAmt * Math.exp(-age * SR_PULSE_DECAY)) >= 0.25;
+          });
+        });
         rings.forEach(function(ring, ri) {
           var rp = Math.max(0, Math.min((EX_T - ri * RESET_STAGGER) / RESET_DUR, 1));
           if (rp < 1) allDone = false;
           var re = 1 - (1 - rp) * (1 - rp) * (1 - rp); // easeOutCubic
           ring.R = BASE_R[ri] * re;
+          var bow = bowStates[ri];
           var a = (isNight ? nightA3[ri] : dayA3[ri]) * Math.min(rp * 3, 1); // fade in quickly
           srCtx.beginPath();
           for (var i3 = 0; i3 <= NSR; i3++) {
             var th3 = (i3 / NSR) * 2 * Math.PI;
-            var x3 = CS2 + ring.R * Math.cos(th3), y3 = CS2 + ring.R * Math.sin(th3);
+            // Smoothly ramp the natural shimmer + cursor deformation in along with the
+            // ring's growth. At rp=0 it's a perfect circle (matches the explode-out look),
+            // at rp=1 it's identical to Phase 0 — no visual snap when the phase ends.
+            var shimmer = ringWaveR(ring, th3, srT) - ring.R;       // just the wave components
+            var bowR    = bowDeformR(bow, th3, srT);
+            var r3 = ring.R + (shimmer + bowR) * re;
+            var x3 = CS2 + r3 * Math.cos(th3), y3 = CS2 + r3 * Math.sin(th3);
             if (i3 === 0) srCtx.moveTo(x3, y3); else srCtx.lineTo(x3, y3);
           }
           srCtx.closePath();
@@ -1108,8 +1122,8 @@ const amenities = [
 
     // ── Mouse interaction: ring bowstring + aurora ────────────────────────────
     document.addEventListener('mousemove', function(e) {
-      // Ring bowstring (idle + compression — not during explosion burst)
-      if (EX_PHASE <= 1) {
+      // Ring bowstring (idle + compression + reset — not during explosion burst)
+      if (EX_PHASE !== 2) {
         var rect = sunEl.getBoundingClientRect();
         var cx = rect.left + rect.width  / 2;
         var cy = rect.top  + rect.height / 2;
