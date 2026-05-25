@@ -121,8 +121,11 @@ const {
         engaged: false, pullX: 0, pullAmt: 0, pulses: [], cooldownUntil: 0,
       }));
       const isTouchDevice = navigator.maxTouchPoints > 0;
-      const ENGAGE_DIST = isTouchDevice ? 22 : 11;
-      const SNAP_DIST   = isTouchDevice ? 28 : 52;  // how far you can pull a band before it snaps
+      // Mobile: a finger is ~40-60px wide and bands are spaced ~50-80px apart on small screens.
+      // ENGAGE_DIST must cover ~half the band spacing so any touch lands within *some* band's
+      // zone — otherwise single-band engagement leaves big dead zones between bands.
+      const ENGAGE_DIST = isTouchDevice ? 50 : 11;
+      const SNAP_DIST   = isTouchDevice ? 55 : 52;  // how far you can pull a band before it snaps
       const BOW_HW      = 60;                        // narrower engaged deformation (was 85)
 
       const PULSE_SPEED      = 2.2;
@@ -130,7 +133,9 @@ const {
       const PULSE_HW0        = 110;
       const USER_PULSE_DECAY = 0.006;                // user-snap pulses fade ~3× faster — cleaner ripples
       const RELEASE_FACTOR   = 0.7;                  // compensates for amp*0.7*2 pulse-split doubling at age=0 (0.7×1.4≈1.0)
-      const SNAP_COOLDOWN_WT = 10;                   // ≈110ms — short enough to spam up/down, long enough to break the resonance-stacking window
+      // Mobile gets a shorter cooldown: touch is naturally slower than mouse so resonance is
+      // less of an issue, and a long cooldown causes finger drags to feel skippy/non-responsive.
+      const SNAP_COOLDOWN_WT = isTouchDevice ? 4 : 10;  // ~45ms mobile / ~110ms desktop
 
       function compY(gl: GLayer, x: number, t: number): number {
         let y = 0;
