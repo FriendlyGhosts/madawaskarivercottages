@@ -45,7 +45,7 @@ Displayed in two sections on the page.
 | 117 Harrison Trail | Whitetail Lodge | 4 | 895861420839792739 | cozy-riverfront |
 | 143 Harrison Trail | Owl's Nest | 4 | 1037163450739528690 | magical-wintertime |
 | 157 Harrison Trail | Cedarwood Cabin | 4 | 679589509313140703 | tucked-away |
-| 165 Harrison Trail | Lazy Bear Lodge | 6 | *(no listing yet)* | *(no photo yet)* |
+| 165 Harrison Trail | Lazy Bear Lodge | 6 | 1705267791513863760 | drone-165 / interior-165 |
 
 ### Section 2 — The Treehouse (in the forest, NOT on the river)
 - **Name:** The Treehouse
@@ -59,6 +59,10 @@ the owner (Luka) should confirm which Airbnb listing belongs to which address.
 Photos can be swapped in index.astro by changing the `photo:` field.
 
 ## Booking / policy (shown in contact section)
+- **Rental season: May through October only** (6 months). Cottages closed Nov-April.
+  This is critical when evaluating PMS subscription costs — flat monthly fees are paid
+  year-round but revenue only flows for 6 months, so commission-based pricing is more
+  competitive than it first appears.
 - 1 week minimum stay
 - Check-in 3pm, check-out 11am
 - 50% deposit to confirm
