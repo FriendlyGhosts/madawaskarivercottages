@@ -100,6 +100,10 @@ const {
         return [A, k, k * speed, phi];
       }
 
+      // Master switch for the sky-aurora bands — flip to true to re-enable them
+      // during zen mode without touching anything else.
+      const SKY_WAVES_ENABLED = false;
+
       // GLayer.fillUp: polygon fills toward y=0 (sky) instead of y=wH (water).
       // GLayer.zenOnly: layer is hidden + non-interactive unless `zen-mode` class is on <html>.
       interface GLayer {
@@ -286,7 +290,7 @@ const {
         let closestDist = Infinity;
         const surfs: number[] = [];
         gLayers.forEach((gl, i) => {
-          if (gl.zenOnly && !isZen) { surfs.push(NaN); return; }
+          if (gl.zenOnly && (!SKY_WAVES_ENABLED || !isZen)) { surfs.push(NaN); return; }
           const st = bowStates[i];
           const surf = gl.baseRatio * wH + compY(gl, mx, wT) + bowDeformPulses(st, mx, wT);
           surfs.push(surf);
@@ -295,7 +299,7 @@ const {
         });
 
         gLayers.forEach((gl, i) => {
-          if (gl.zenOnly && !isZen) return;
+          if (gl.zenOnly && (!SKY_WAVES_ENABLED || !isZen)) return;
           const st   = bowStates[i];
           const surf = surfs[i];
           const rawPull = my - surf;
@@ -387,6 +391,7 @@ const {
         let riverIdx = 0;
         bowStates.forEach((st, i) => {
           if (gLayers[i].zenOnly) {
+            if (!SKY_WAVES_ENABLED) return; // skip sky ripples while sky bands are off
             // Sky band — push upward (negative pull) with a gentler amplitude
             const skyIdx = i - 5; // 0..4 within the sky stack
             st.pulses.push({ pullX: ox, releaseAmt: -(70 + skyIdx * 10), releaseT: wT + skyIdx * 2, hw0: 1950, riseT: 14 });
