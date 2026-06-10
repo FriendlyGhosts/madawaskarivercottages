@@ -107,6 +107,16 @@ export async function getStaticPaths() {
     } catch { return []; }
   }
 
+  // Merge booked dates from a primary + any extra iCal feeds (e.g. Cottages in
+  // Canada, VRBO, Booking.com) so on-site availability is always accurate even
+  // when one channel's sync lags behind another.
+  async function _fetchMulti(urls: (string | null | undefined)[]): Promise<string[]> {
+    const clean = urls.filter((u): u is string => !!u);
+    if (clean.length === 0) return [];
+    const results = await Promise.all(clean.map(_fetch));
+    return [...new Set(results.flat())].sort();
+  }
+
   const PROPERTIES = [
     {
       slug: 'whitetail-lodge',
@@ -182,6 +192,11 @@ export async function getStaticPaths() {
       heroPhoto: 3,
       airbnbId: '1705267791513863760',
       icalUrl: 'https://www.airbnb.ca/calendar/ical/1705267791513863760.ics?t=b217513ece8b4f479ca777dace40c7da',
+      extraIcalUrls: [
+        // Cottages in Canada feed — read directly so bookings made via CiC show
+        // up before Airbnb's import sync cycle has had time to propagate.
+        'https://app.cottagesincanada.com/process/calendar.ics?id=18216&k=912728000',
+      ],
       description: 'Spacious and comfortable with room for the whole crew. A full kitchen, large living area, fire pit, and private dock on the Madawaska River.',
       longDescription: "When the whole group decides to get away, Lazy Bear Lodge is built for it. Sleeping six across a queen, a double, and a pull-out sofa, there's space to spread out without stepping on each other. The large living area is the natural gathering point — morning coffee, card games at midnight, everything in between. Outside: a fire pit, a dock, canoes, and the Madawaska rolling past. Pets welcome.",
       rate: 240,
@@ -212,7 +227,7 @@ export async function getStaticPaths() {
 
   const paths = await Promise.all(
     PROPERTIES.map(async (p) => {
-      const bookedDates = await _fetch(p.icalUrl);
+      const bookedDates = await _fetchMulti([p.icalUrl, ...((p as any).extraIcalUrls ?? [])]);
       return { params: { slug: p.slug }, props: { ...p, bookedDates } };
     })
   );

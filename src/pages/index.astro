@@ -48,6 +48,17 @@ async function fetchBookedDates(icalUrl: string | null): Promise<string[]> {
   } catch { return []; }
 }
 
+// Merge booked dates from a primary + any number of extra iCal feeds.
+// Used when a cottage is double-listed across channels (Airbnb + Cottages in Canada,
+// VRBO, Booking.com, etc.) — we union all blocked dates so the on-site calendar is
+// always accurate even if one feed lags behind another.
+async function fetchBookedDatesMulti(urls: (string | null | undefined)[]): Promise<string[]> {
+  const clean = urls.filter((u): u is string => !!u);
+  if (clean.length === 0) return [];
+  const results = await Promise.all(clean.map(fetchBookedDates));
+  return [...new Set(results.flat())].sort();
+}
+
 // ─── Calendar data builder ────────────────────────────────────────────────────
 
 const MONTH_NAMES = ['January','February','March','April','May','June',
@@ -134,6 +145,12 @@ const cottageDefs = [
     photo: '/images/cottages/drone-165-3.jpg',
     airbnbId: '1705267791513863760',
     icalUrl: 'https://www.airbnb.ca/calendar/ical/1705267791513863760.ics?t=b217513ece8b4f479ca777dace40c7da',
+    extraIcalUrls: [
+      // Cottages in Canada feed — bookings made via CiC won't show up on Airbnb's
+      // export until Airbnb's next sync cycle runs (can take hours), so we read CiC
+      // directly to keep the on-site calendar instantly accurate.
+      'https://app.cottagesincanada.com/process/calendar.ics?id=18216&k=912728000',
+    ],
     description: 'Spacious and comfortable with room for the whole crew. A full kitchen, large living area, fire pit, and private dock on the Madawaska River.',
   },
 ];
@@ -155,12 +172,16 @@ const treehouseDef = {
   description: "Tucked into the forest, 650 m from the road along a rustic trail — this one isn't on the river. It's something different. No neighbours, no noise, just trees and sky. Reconnect with nature at this unforgettable escape.",
 };
 
-// Fetch all iCal feeds in parallel at build time
-const icalUrls = [...cottageDefs.map(c => c.icalUrl), treehouseDef.icalUrl];
-const allDates = await Promise.all(icalUrls.map(fetchBookedDates));
+// Fetch all iCal feeds in parallel at build time. Each cottage's primary feed
+// (`icalUrl`) and any extras (`extraIcalUrls`) are unioned so blocked dates from
+// every channel show up regardless of which platform the booking originated on.
+const allCottageDates = await Promise.all(
+  cottageDefs.map(c => fetchBookedDatesMulti([c.icalUrl, ...((c as any).extraIcalUrls ?? [])]))
+);
+const treehouseDates = await fetchBookedDatesMulti([treehouseDef.icalUrl]);
 
-const cottages = cottageDefs.map((c, i) => ({ ...c, calMonths: buildCalendar(allDates[i]) }));
-const treehouse = { ...treehouseDef, calMonths: buildCalendar(allDates[icalUrls.length - 1]) };
+const cottages = cottageDefs.map((c, i) => ({ ...c, calMonths: buildCalendar(allCottageDates[i]) }));
+const treehouse = { ...treehouseDef, calMonths: buildCalendar(treehouseDates) };
 
 const amenities = [
   { label: 'Private Riverfront Dock', svg: `<svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><rect x="3" y="10" width="26" height="3" rx="0.5"/><line x1="8" y1="13" x2="8" y2="22"/><line x1="16" y1="13" x2="16" y2="22"/><line x1="24" y1="13" x2="24" y2="22"/><path d="M2 22 Q9 19 16 22 Q23 25 30 22"/></svg>` },
