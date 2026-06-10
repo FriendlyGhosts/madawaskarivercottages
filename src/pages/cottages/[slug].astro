@@ -1154,9 +1154,14 @@ const calYear = calMonths[0].year;
       enqMessageEl.value = buildEnquiryMessage(selStart, selEnd);
       // Reveal section
       enquirySection.style.maxHeight = '1400px';
+      // Wait for the max-height expand transition (0.7s in CSS) to finish so the
+      // final height is known before we scroll — otherwise scrollIntoView snaps
+      // to the form's mid-animation height and stops short of the submit button.
       setTimeout(() => {
-        enquirySection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 80);
+        // block: 'end' aligns the bottom of the form with the bottom of the
+        // viewport, so the whole form (including submit button) is visible.
+        enquirySection.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      }, 750);
     });
 
     enqForm.addEventListener('submit', async (e) => {
