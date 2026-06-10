@@ -100,8 +100,18 @@ const {
         return [A, k, k * speed, phi];
       }
 
-      interface GLayer { baseRatio: number; comps: WComp[]; dayColor: string; nightColor: string; }
+      // GLayer.fillUp: polygon fills toward y=0 (sky) instead of y=wH (water).
+      // GLayer.zenOnly: layer is hidden + non-interactive unless `zen-mode` class is on <html>.
+      interface GLayer {
+        baseRatio: number;
+        comps: WComp[];
+        dayColor: string;
+        nightColor: string;
+        fillUp?: boolean;
+        zenOnly?: boolean;
+      }
       const gLayers: GLayer[] = [
+        // ── River waves — bottom half of viewport, always visible ──────────────
         { baseRatio: 0.50, dayColor: 'rgba(28,80,110,0.06)',  nightColor: 'rgba(15,55,45,0.14)',
           comps: [wc(10,760,1.8,0.00), wc(4.5,440,1.4,1.10), wc(2.0,230,1.0,2.30), wc(0.8,115,0.7,0.55)] },
         { baseRatio: 0.60, dayColor: 'rgba(28,80,110,0.09)',  nightColor: 'rgba(15,55,45,0.20)',
@@ -112,6 +122,25 @@ const {
           comps: [wc(7,680,2.0,2.40), wc(3.0,380,1.6,0.70), wc(1.6,200,1.2,1.80), wc(0.7,100,0.9,3.10)] },
         { baseRatio: 0.84, dayColor: 'rgba(28,80,110,0.19)',  nightColor: 'rgba(15,55,45,0.40)',
           comps: [wc(6,640,2.1,3.20), wc(2.5,360,1.7,1.50), wc(1.4,190,1.3,0.30), wc(0.6,95,1.0,2.10)] },
+
+        // ── Sky waves (aurora) — top of viewport, zen-mode only ───────────────
+        // Same wave physics as the rivers, just inverted vertically and recoloured.
+        // Layers cascade outward from the topmost band so each colour peeks through.
+        { baseRatio: 0.42, fillUp: true, zenOnly: true,
+          dayColor: 'rgba(120,140,235,0.10)', nightColor: 'rgba(120,140,235,0.22)',
+          comps: [wc(6,640,2.1,3.20), wc(2.5,360,1.7,1.50), wc(1.4,190,1.3,0.30), wc(0.6,95,1.0,2.10)] },
+        { baseRatio: 0.34, fillUp: true, zenOnly: true,
+          dayColor: 'rgba(225,100,185,0.10)', nightColor: 'rgba(225,100,185,0.22)',
+          comps: [wc(7,680,2.0,2.40), wc(3.0,380,1.6,0.70), wc(1.6,200,1.2,1.80), wc(0.7,100,0.9,3.10)] },
+        { baseRatio: 0.27, fillUp: true, zenOnly: true,
+          dayColor: 'rgba(90,205,220,0.12)',  nightColor: 'rgba(90,205,220,0.26)',
+          comps: [wc(8,720,1.7,1.60), wc(3.5,420,1.3,0.40), wc(2.2,240,0.9,2.80), wc(1.0,120,0.6,1.20)] },
+        { baseRatio: 0.20, fillUp: true, zenOnly: true,
+          dayColor: 'rgba(170,110,240,0.13)', nightColor: 'rgba(170,110,240,0.28)',
+          comps: [wc(9,690,1.9,0.80), wc(4.0,400,1.5,2.00), wc(1.8,210,1.1,0.90), wc(0.9,105,0.8,1.70)] },
+        { baseRatio: 0.13, fillUp: true, zenOnly: true,
+          dayColor: 'rgba(110,225,155,0.14)', nightColor: 'rgba(110,225,155,0.30)',
+          comps: [wc(10,760,1.8,0.00), wc(4.5,440,1.4,1.10), wc(2.0,230,1.0,2.30), wc(0.8,115,0.7,0.55)] },
       ];
 
       // Per-layer bowstring state — supports multiple concurrent pulses
@@ -215,8 +244,14 @@ const {
           wctx.quadraticCurveTo(x0, prevY, (x0 + x1) / 2, (prevY + y1) / 2);
           prevY = y1;
         }
-        wctx.lineTo(wW, wH);
-        wctx.lineTo(0, wH);
+        // Close polygon: fillUp closes up to y=0 (sky), default closes down to y=wH (water)
+        if (gl.fillUp) {
+          wctx.lineTo(wW, 0);
+          wctx.lineTo(0, 0);
+        } else {
+          wctx.lineTo(wW, wH);
+          wctx.lineTo(0, wH);
+        }
         wctx.closePath();
         wctx.fillStyle = isNight ? gl.nightColor : gl.dayColor;
         wctx.fill();
@@ -240,14 +275,18 @@ const {
         st.cooldownUntil = wT + SNAP_COOLDOWN_WT;
       }
 
-      // Wave interaction — single-band engagement, clamped pull, gentle release
+      // Wave interaction — single-band engagement, clamped pull, gentle release.
+      // zenOnly layers (sky aurora) are skipped entirely when zen mode is off so
+      // the cursor doesn't engage invisible bands in the sky area.
       function handleWaveInteraction(mx: number, my: number) {
+        const isZen = document.documentElement.classList.contains('zen-mode');
         // Pass 1: find the band whose natural surface is closest to the cursor.
         // Only one band engages at a time; others release as small ripples.
         let closestIdx = -1;
         let closestDist = Infinity;
         const surfs: number[] = [];
         gLayers.forEach((gl, i) => {
+          if (gl.zenOnly && !isZen) { surfs.push(NaN); return; }
           const st = bowStates[i];
           const surf = gl.baseRatio * wH + compY(gl, mx, wT) + bowDeformPulses(st, mx, wT);
           surfs.push(surf);
@@ -256,6 +295,7 @@ const {
         });
 
         gLayers.forEach((gl, i) => {
+          if (gl.zenOnly && !isZen) return;
           const st   = bowStates[i];
           const surf = surfs[i];
           const rawPull = my - surf;
@@ -313,29 +353,63 @@ const {
         });
         wctx.clearRect(0, 0, wW, wH);
         wT = (performance.now() - wStartTime) * 0.09; // +50% speed vs 60fps baseline
-        gLayers.forEach((l, li) => drawGLayer(l, li));
+        const isZen = document.documentElement.classList.contains('zen-mode');
+        gLayers.forEach((l, li) => {
+          if (l.zenOnly && !isZen) return; // hide aurora bands outside zen mode
+          drawGLayer(l, li);
+        });
         requestAnimationFrame(animateWaves);
       }
       animateWaves();
 
-      // Expose wave ripple so solar explosion can disturb the river
+      // When zen mode exits, clear any engagement/pulses on the aurora bands so
+      // they don't carry hidden state into the next activation.
+      const zenObserver = new MutationObserver(() => {
+        const isZen = document.documentElement.classList.contains('zen-mode');
+        if (!isZen) {
+          gLayers.forEach((gl, i) => {
+            if (!gl.zenOnly) return;
+            const st = bowStates[i];
+            st.engaged = false;
+            st.pullAmt = 0;
+            st.pulses = [];
+            st.cooldownUntil = 0;
+          });
+        }
+      });
+      zenObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+
+      // Expose wave ripple so solar explosion can disturb the river.
+      // Sky aurora bands also catch the shockwave, but inverted (pushed upward)
+      // since the energy is radiating outward from the sun in the sky.
       (window as any).triggerWaveRipple = () => {
         const ox = wW * 0.84; // directly below the sun (top-right)
+        let riverIdx = 0;
         bowStates.forEach((st, i) => {
-          // Primary shockwave — fast deep press, very wide bell (3× wider than original)
-          st.pulses.push({ pullX: ox, releaseAmt: 95 + i * 15, releaseT: wT + i * 2, hw0: 1950, riseT: 14 });
-          // Secondary trailing ripple — arrives ~0.45s later, also 3× wider
-          st.pulses.push({ pullX: ox, releaseAmt: 48 + i * 8, releaseT: wT + i * 2 + 27, hw0: 1140, riseT: 10 });
+          if (gLayers[i].zenOnly) {
+            // Sky band — push upward (negative pull) with a gentler amplitude
+            const skyIdx = i - 5; // 0..4 within the sky stack
+            st.pulses.push({ pullX: ox, releaseAmt: -(70 + skyIdx * 10), releaseT: wT + skyIdx * 2, hw0: 1950, riseT: 14 });
+            st.pulses.push({ pullX: ox, releaseAmt: -(36 + skyIdx * 6), releaseT: wT + skyIdx * 2 + 27, hw0: 1140, riseT: 10 });
+          } else {
+            // River band — original downward shockwave
+            st.pulses.push({ pullX: ox, releaseAmt: 95 + riverIdx * 15, releaseT: wT + riverIdx * 2, hw0: 1950, riseT: 14 });
+            st.pulses.push({ pullX: ox, releaseAmt: 48 + riverIdx * 8, releaseT: wT + riverIdx * 2 + 27, hw0: 1140, riseT: 10 });
+            riverIdx++;
+          }
         });
       };
 
-      // Periodic tidal wave — large swell that sweeps across the river in alternating directions
+      // Periodic tidal wave — river-only sweep across the water
       let tidalDir = 1;
       (window as any).triggerTidalWave = () => {
         const ox = tidalDir > 0 ? -300 : wW + 300; // start off-screen left or right
         tidalDir = -tidalDir;
+        let riverIdx = 0;
         bowStates.forEach((st, i) => {
-          st.pulses.push({ pullX: ox, releaseAmt: -(280 + i * 35), releaseT: wT + i * 4, hw0: 380, riseT: 22, decay: 0.000225 });
+          if (gLayers[i].zenOnly) return; // sky bands stay still during tidal sweep
+          st.pulses.push({ pullX: ox, releaseAmt: -(280 + riverIdx * 35), releaseT: wT + riverIdx * 4, hw0: 380, riseT: 22, decay: 0.000225 });
+          riverIdx++;
         });
       };
 

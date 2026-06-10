@@ -863,206 +863,17 @@ const amenities = [
       requestAnimationFrame(drawSunRings);
     }
 
-    // ── Aurora state (Gerstner waves, interactive, persists during zen mode) ──
-    var skyEl = null, aCanvas = null, aAF = null, auroraActive = false;
+    // ── Zen mode sky effects — solar flare flash + tidal-wave scheduling ──────
+    // The sky waves themselves live in Layout.astro (sLayers in the wave canvas),
+    // gated on the `zen-mode` class. We only handle the one-shot orange flash here
+    // and kick off the periodic tidal waves while zen mode is active.
+    var skyEl = null;
     var tidalInterval = null, tidalTimeout = null;
-    var aW = 0, aH = 0, aT = 0;
 
-    // 5 aurora layers — each has a unique fill colour, Gerstner components, and bowstring state
-    // comps: [amplitude, wavenumber-k, speed, phase-offset]
-    // fill: drawn bottom-to-top so each band peeks out between the wave lines above it
-    var aLayers = [
-      {yFrac:0.08, fill:'rgba(110,225,155,0.38)',  comps:[[18,1.8,0.006,0.0],[9,2.9,0.004,1.1],[5,4.1,0.003,2.3]], engaged:false, engX:0, pullAmt:0, pulses:[], cooldownUntil:0},
-      {yFrac:0.15, fill:'rgba(170,110,240,0.36)',  comps:[[15,2.1,0.007,0.7],[8,3.4,0.005,1.8],[4,5.0,0.003,0.4]], engaged:false, engX:0, pullAmt:0, pulses:[], cooldownUntil:0},
-      {yFrac:0.22, fill:'rgba(90,205,220,0.38)',   comps:[[20,1.6,0.005,1.5],[10,2.7,0.004,2.2],[6,4.3,0.003,0.9]], engaged:false, engX:0, pullAmt:0, pulses:[], cooldownUntil:0},
-      {yFrac:0.29, fill:'rgba(225,100,185,0.34)',  comps:[[12,2.3,0.008,2.0],[6,3.8,0.005,0.3],[4,5.5,0.003,1.4]], engaged:false, engX:0, pullAmt:0, pulses:[], cooldownUntil:0},
-      {yFrac:0.36, fill:'rgba(120,140,235,0.36)',  comps:[[17,1.9,0.006,0.8],[8,3.1,0.004,1.6],[5,4.7,0.003,2.7]], engaged:false, engX:0, pullAmt:0, pulses:[], cooldownUntil:0},
-    ];
-    var A_ENGAGE_DIST = 40, A_SNAP_DIST = 42;
-    // PULL_SCALE 1.4: visual pull = pullAmt × 1.4. With SNAP_DIST=42, max pull = ~59px,
-    // which sits below natural-wave amplitude (~93px) but is clearly visible. Combined
-    // with multi-band engagement (cursor passing through multiple bands engages each),
-    // this finally feels wave-like instead of glitchy.
-    var A_PULL_SCALE  = 1.4, A_PULSE_SPEED = 3.5, A_PULSE_DECAY = 0.008;
-    // Amp compensation: held visual = pullAmt * A_PULL_SCALE; released visual at age=0 = releaseAmt * 0.55 * 2.
-    // Match the two so there's no spike at snap.
-    var A_RELEASE_FACTOR    = A_PULL_SCALE / 1.1;
-    var A_USER_PULSE_DECAY  = 0.0075; // pulses persist long enough to read as travelling ripples
-    var A_SNAP_COOLDOWN_AT  = 3;      // ≈45ms — short, so sweeping the cursor produces continuous ripples
-    var A_BELL_HW_FRAC      = 0.30;   // engaged bell width fraction — also used as snap pulse's starting width
-    var A_TILT = 0.72; // total upward shift across the drawing width
-
-    // Curved arch: gentle at left, steepens toward right
-    // Curve starts at 5% width so bands begin angling almost immediately
-    // All bands clip at y=0 before x=78% screen width — sun stays clear
-    function aTiltY(x) {
-      if (aW <= 0) return 0;
-      var t = Math.max(0, x / aW - 0.05) / 0.95; // 0→1 starting at 5% of drawing width
-      return -(t * t * A_TILT * aH);
-    }
-
-    // Cascade intro — each band slides down from above into its resting position
-    // Time-based so it runs identically on 60 Hz and 120 Hz screens
-    var INTRO_TRAVEL_MS = 2500; // ms each band takes to settle
-    var INTRO_STAGGER_MS = 750; // ms between each successive band
-    var aStartTime = 0;
-    function aIntroOffset(li) {
-      var elapsed = performance.now() - aStartTime;
-      var staggered = elapsed - li * INTRO_STAGGER_MS;
-      if (staggered <= 0) return -aH * 0.55; // not yet started — hidden above
-      var p = Math.min(staggered, INTRO_TRAVEL_MS) / INTRO_TRAVEL_MS;
-      var ease = 1 - (1 - p) * (1 - p) * (1 - p); // easeOutCubic — floats in, settles gently
-      return -aH * 0.55 * (1 - ease); // from -aH*0.55 → 0
-    }
-
-    // Desktop gets bigger aurora waves; mobile is already nicely exaggerated by the smaller canvas
-    var aAmpScale = navigator.maxTouchPoints > 0 ? 1.0 : 2.9;
-
-    // Gerstner y for a layer at position x and time t
-    // Peak-sharpening: compress mid-wave values so tips are pointier and troughs wider
-    function aLayerY(layer, x, t) {
-      var y = layer.yFrac * aH;
-      var raw = 0, maxA = 0;
-      for (var j = 0; j < layer.comps.length; j++) {
-        var c = layer.comps[j];
-        raw  += c[0] * Math.sin((2 * Math.PI / aW) * c[1] * x + c[2] * t + c[3]);
-        maxA += c[0];
-      }
-      // norm in [-1,1]; power 1.4 hollows mid-range → sharper peaks, wider troughs
-      var norm = raw / maxA;
-      var sharp = (norm >= 0 ? 1 : -1) * Math.pow(Math.abs(norm), 1.4);
-      y += sharp * maxA * aAmpScale;
-      return y;
-    }
-
-    // Bowstring + traveling-pulse displacement for a layer at x
-    function aBowY(layer, x) {
-      var res = 0;
-      if (layer.engaged) {
-        var dx = x - layer.engX;
-        var hw = aW * A_BELL_HW_FRAC;
-        if (Math.abs(dx) < hw) {
-          var b = 0.5 + 0.5 * Math.cos(Math.PI * dx / hw);
-          res += layer.pullAmt * A_PULL_SCALE * b * b;
-        }
-      }
-      for (var p = 0; p < layer.pulses.length; p++) {
-        var pulse = layer.pulses[p];
-        var age = aT - pulse.releaseT;
-        var pDecay = pulse.decay || A_PULSE_DECAY;
-        var amp = pulse.releaseAmt * Math.exp(-age * pDecay);
-        if (Math.abs(amp) < 0.5) continue;
-        var baseHw = pulse.initHw || (aW * 0.07);
-        var hw2 = baseHw + age * A_PULSE_SPEED;
-        var ctrs = [pulse.releaseX - A_PULSE_SPEED * age, pulse.releaseX + A_PULSE_SPEED * age];
-        for (var ci = 0; ci < 2; ci++) {
-          var d2 = x - ctrs[ci];
-          if (Math.abs(d2) < hw2) {
-            var b2 = 0.5 + 0.5 * Math.cos(Math.PI * d2 / hw2);
-            res += amp * 0.55 * b2 * b2;
-          }
-        }
-      }
-      return res;
-    }
-
-    // Snap-release helper — amplitude compensated for the *0.55*2 split (no visual spike)
-    // and starting width matched to the engaged bell (no visual width jump). Also sets a
-    // brief cooldown so the same layer can't immediately re-engage and stack pulses.
-    function releaseAuroraSnap(layer) {
-      layer.pulses.push({
-        releaseX: layer.engX,
-        releaseAmt: layer.pullAmt * A_RELEASE_FACTOR,
-        releaseT: aT,
-        initHw: aW * A_BELL_HW_FRAC,
-        decay: A_USER_PULSE_DECAY,
-      });
-      layer.engaged = false;
-      layer.pullAmt = 0;
-      layer.cooldownUntil = aT + A_SNAP_COOLDOWN_AT;
-    }
-
-    // Engage / snap aurora layers based on cursor position.
-    // Unlike the rivers, aurora wants MULTI-BAND engagement: the cursor visibly
-    // sweeps across bands stacked vertically (yFrac 0.08→0.36), and the user expects
-    // each band it passes through to ripple — like dragging through actual northern
-    // lights. Single-band engagement (correct for rivers) made the aurora feel
-    // dead because only one band ever reacted at a time. Clamping + short cooldown
-    // still prevents stacking abuse.
-    function updateAuroraInteraction(mx, my) {
-      if (!auroraActive) return;
-      aLayers.forEach(function(layer) {
-        if (layer.engaged) {
-          layer.engX = mx;
-          var rawPull = my - layer.yFrac * aH - aTiltY(mx);
-          // Clamp so a fast move can't spawn a giant pulse on snap
-          layer.pullAmt = Math.max(-A_SNAP_DIST, Math.min(A_SNAP_DIST, rawPull));
-          if (Math.abs(rawPull) >= A_SNAP_DIST) releaseAuroraSnap(layer);
-        } else {
-          var dist = Math.abs(my - aLayerY(layer, mx, aT) - aTiltY(mx));
-          if (dist <= A_ENGAGE_DIST && aT >= layer.cooldownUntil) {
-            layer.engaged = true; layer.engX = mx; layer.pullAmt = 0;
-          }
-        }
-      });
-    }
-
-    // Release any engaged aurora layers gently on mouse-up / touch-end
-    function snapAuroraLayers() {
-      if (!auroraActive) return;
-      aLayers.forEach(function(layer) { if (layer.engaged) releaseAuroraSnap(layer); });
-    }
-
-    function drawAurora() {
-      if (!auroraActive || !aCanvas) return;
-      // Expire old pulses (per-pulse decay so user-snap pulses fade on their own faster timer)
-      aLayers.forEach(function(layer) {
-        layer.pulses = layer.pulses.filter(function(p) {
-          var pDecay = p.decay || A_PULSE_DECAY;
-          return Math.abs(p.releaseAmt * Math.exp(-(aT - p.releaseT) * pDecay)) >= 0.5;
-        });
-      });
-      var actx = aCanvas.getContext('2d');
-      actx.clearRect(0, 0, aW, aH);
-      // Draw bottom layer first — each upper layer covers it, revealing a distinct colour band
-      for (var li = aLayers.length - 1; li >= 0; li--) {
-        var layer = aLayers[li];
-        var introOff = aIntroOffset(li);
-        var step = 4;
-        actx.save();
-        actx.translate(0, introOff); // cascade: band enters from above
-        var yprev = aLayerY(layer, 0, aT) + aBowY(layer, 0); // aTiltY(0)=0
-        actx.beginPath();
-        actx.moveTo(0, yprev);
-        for (var xi = 1; xi * step <= aW; xi++) {
-          var xp = (xi - 1) * step;
-          var xc = xi * step;
-          var yc = aLayerY(layer, xc, aT) + aBowY(layer, xc) + aTiltY(xc);
-          actx.quadraticCurveTo(xp, yprev, (xp + xc) / 2, (yprev + yc) / 2);
-          yprev = yc;
-        }
-        // Fill upward to y=0 — inverted river-wave style
-        actx.lineTo(aW, 0);
-        actx.lineTo(0, 0);
-        actx.closePath();
-        actx.fillStyle = layer.fill;
-        actx.fill();
-        actx.restore();
-      }
-      aT = (performance.now() - aStartTime) * 0.069; // +15% speed vs baseline
-      aAF = requestAnimationFrame(drawAurora);
-    }
-
-    // ── Persistent sky + aurora — called when zen mode is entered ─────────────
     function triggerSkyEffects(isNight) {
-      // Tear down any remnants
-      if (skyEl   && skyEl.parentNode)   { skyEl.parentNode.removeChild(skyEl);     skyEl   = null; }
-      if (aCanvas && aCanvas.parentNode) { aCanvas.parentNode.removeChild(aCanvas); aCanvas = null; }
-      if (aAF) { cancelAnimationFrame(aAF); aAF = null; }
+      if (skyEl && skyEl.parentNode) { skyEl.parentNode.removeChild(skyEl); skyEl = null; }
       if (tidalTimeout)  { clearTimeout(tidalTimeout);   tidalTimeout  = null; }
       if (tidalInterval) { clearInterval(tidalInterval); tidalInterval = null; }
-      auroraActive = false;
-
 
       // Solar flare flash — bright orange burst that fades back to normal sky
       skyEl = document.createElement('div');
@@ -1074,7 +885,6 @@ const amenities = [
       document.body.appendChild(skyEl);
       requestAnimationFrame(function() { requestAnimationFrame(function() {
         skyEl.style.opacity = '1';
-        // Flash peak held briefly, then fade out completely
         setTimeout(function() {
           skyEl.style.transition = 'opacity 2.4s ease';
           skyEl.style.opacity = '0';
@@ -1085,36 +895,8 @@ const amenities = [
         }, 300);
       }); });
 
-      // Aurora canvas — full-width element but drawing limited to 78% to leave sun clear
-      var adpr = window.devicePixelRatio || 1;
-      var totalW = window.innerWidth;
-      aW = Math.round(totalW * 0.78); // drawing width — aurora clips before the sun
-      aH = Math.round(window.innerHeight * 0.72);
-      aCanvas = document.createElement('canvas');
-      aCanvas.style.cssText = [
-        'position:fixed', 'top:0', 'left:0', 'width:100vw', 'height:72vh',
-        'z-index:41', 'pointer-events:none',
-        'mix-blend-mode:multiply', 'opacity:0', 'transition:opacity 0.2s ease',
-      ].join(';');
-      aCanvas.width  = Math.round(totalW * adpr); // full physical width so 100vw CSS fits correctly
-      aCanvas.height = Math.round(aH * adpr);
-      aCanvas.getContext('2d').setTransform(adpr, 0, 0, adpr, 0, 0);
-      document.body.appendChild(aCanvas);
-
-      // Reset layer state
-      aT = 0;
-      aStartTime = performance.now();
-      aLayers.forEach(function(layer) { layer.engaged = false; layer.pullAmt = 0; layer.pulses = []; });
-      auroraActive = true;
-
-      requestAnimationFrame(function() { requestAnimationFrame(function() {
-        aCanvas.style.opacity = '1';
-        drawAurora();
-      }); });
-
-      // First tidal wave at 15 s, then every 30 s after that
-      if (tidalTimeout)  clearTimeout(tidalTimeout);
-      if (tidalInterval) clearInterval(tidalInterval);
+      // First tidal wave at 15 s, then every 30 s after that — Layout.astro's
+      // triggerTidalWave drives the river bowstring pool directly.
       tidalTimeout = setTimeout(function() {
         if (typeof window.triggerTidalWave === 'function') window.triggerTidalWave();
         tidalInterval = setInterval(function() {
@@ -1133,15 +915,6 @@ const amenities = [
       }
       if (tidalTimeout)  { clearTimeout(tidalTimeout);   tidalTimeout  = null; }
       if (tidalInterval) { clearInterval(tidalInterval); tidalInterval = null; }
-      if (aCanvas) {
-        auroraActive = false;
-        if (aAF) { cancelAnimationFrame(aAF); aAF = null; }
-        aCanvas.style.transition = 'opacity 1.4s ease';
-        aCanvas.style.opacity = '0';
-        var _a = aCanvas; aCanvas = null;
-        setTimeout(function() { _a.parentNode && _a.parentNode.removeChild(_a); }, 1500);
-        aLayers.forEach(function(layer) { layer.engaged = false; layer.pullAmt = 0; layer.pulses = []; });
-      }
     };
 
     // ── Expose trigger to the global scope ───────────────────────────────────
@@ -1151,44 +924,30 @@ const amenities = [
       bowStates.forEach(function(bow) { bow.engaged = false; bow.pullAmt = 0; });
     };
 
-    // ── Mouse interaction: ring bowstring + aurora ────────────────────────────
+    // ── Mouse interaction: ring bowstring (aurora is handled by Layout.astro) ─
     document.addEventListener('mousemove', function(e) {
       // Ring bowstring (idle + compression + reset — not during explosion burst)
-      if (EX_PHASE !== 2) {
-        var rect = sunEl.getBoundingClientRect();
-        var cx = rect.left + rect.width  / 2;
-        var cy = rect.top  + rect.height / 2;
-        var dx = e.clientX - cx, dy = e.clientY - cy;
-        var dist = Math.sqrt(dx * dx + dy * dy);
-        var theta = Math.atan2(dy, dx);
-        rings.forEach(function(ring, ri) {
-          var bow = bowStates[ri];
-          var dfr = Math.abs(dist - ring.R);
-          if (bow.engaged) {
-            bow.theta = theta; bow.pullAmt = dist - ring.R;
-            if (Math.abs(bow.pullAmt) >= SR_SNAP_DIST) {
-              bow.pulses.push({ theta: bow.theta, releaseAmt: bow.pullAmt * SR_PULL_SCALE, releaseT: srT });
-              bow.engaged = false; bow.pullAmt = 0;
-            }
-          } else if (dfr <= SR_ENGAGE_DIST) {
-            bow.engaged = true; bow.theta = theta; bow.pullAmt = 0;
+      if (EX_PHASE === 2) return;
+      var rect = sunEl.getBoundingClientRect();
+      var cx = rect.left + rect.width  / 2;
+      var cy = rect.top  + rect.height / 2;
+      var dx = e.clientX - cx, dy = e.clientY - cy;
+      var dist = Math.sqrt(dx * dx + dy * dy);
+      var theta = Math.atan2(dy, dx);
+      rings.forEach(function(ring, ri) {
+        var bow = bowStates[ri];
+        var dfr = Math.abs(dist - ring.R);
+        if (bow.engaged) {
+          bow.theta = theta; bow.pullAmt = dist - ring.R;
+          if (Math.abs(bow.pullAmt) >= SR_SNAP_DIST) {
+            bow.pulses.push({ theta: bow.theta, releaseAmt: bow.pullAmt * SR_PULL_SCALE, releaseT: srT });
+            bow.engaged = false; bow.pullAmt = 0;
           }
-        });
-      }
-      // Aurora bowstring
-      updateAuroraInteraction(e.clientX, e.clientY);
+        } else if (dfr <= SR_ENGAGE_DIST) {
+          bow.engaged = true; bow.theta = theta; bow.pullAmt = 0;
+        }
+      });
     });
-
-    // Snap aurora on mouse release
-    document.addEventListener('mouseup', function() { snapAuroraLayers(); });
-
-    // Touch interaction for aurora (passive — scroll still works)
-    document.addEventListener('touchmove', function(e) {
-      if (!auroraActive) return;
-      var t = e.touches[0];
-      updateAuroraInteraction(t.clientX, t.clientY);
-    }, { passive: true });
-    document.addEventListener('touchend', function() { snapAuroraLayers(); }, { passive: true });
 
     drawSunRings();
   })();
