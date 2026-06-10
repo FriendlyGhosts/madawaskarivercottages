@@ -325,21 +325,31 @@ const calYear = calMonths[0].year;
     #lightbox {
       display: none;
       position: fixed; inset: 0; z-index: 10000;
-      background: rgba(0,0,0,0.96);
-      align-items: center; justify-content: center;
+      /* Lighter tint so backdrop-filter has something to actually blur — feels
+         like soft frosted glass with the page visible through it. */
+      background: rgba(12,8,4,0.55);
+      backdrop-filter: blur(28px) saturate(1.25);
+      -webkit-backdrop-filter: blur(28px) saturate(1.25);
     }
     #lightbox.lb-open {
-      display: flex;
-      animation: lbFadeIn 0.2s ease;
+      display: block;
+      animation: lbFadeIn 0.32s ease;
     }
     @keyframes lbFadeIn { from { opacity:0 } to { opacity:1 } }
-    #lb-img {
+
+    /* Two stacked images crossfade on every nav. inset:0; margin:auto centres
+       absolutely-positioned children inside the fixed lightbox without needing
+       a flex parent (which would also affect the buttons). */
+    .lb-img {
+      position: absolute; inset: 0; margin: auto;
       max-width: 95vw; max-height: 90vh;
-      object-fit: contain; display: block;
+      object-fit: contain;
       user-select: none; -webkit-user-select: none;
-      animation: lbImgIn 0.18s ease;
+      opacity: 0;
+      transition: opacity 0.42s ease;
+      pointer-events: none;
     }
-    @keyframes lbImgIn { from { opacity:0; transform:scale(0.97) } to { opacity:1; transform:scale(1) } }
+    .lb-img.lb-img-front { opacity: 1; }
     #lb-close {
       position: absolute; top: 16px; right: 20px;
       background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.18);
@@ -778,7 +788,12 @@ const calYear = calMonths[0].year;
   <div id="lightbox" role="dialog" aria-modal="true" aria-label="Photo viewer">
     <button id="lb-close" aria-label="Close photo viewer">✕</button>
     <button id="lb-prev" class="lb-nav" aria-label="Previous photo">‹</button>
-    <img id="lb-img" src="" alt="" draggable="false" />
+    <!-- Two stacked <img> elements crossfade on every navigation. Whichever has
+         the .lb-img-front class is fully opaque; the other is invisible. We load
+         the next picture into the hidden one, wait for it to fully decode, then
+         swap the class — so there's never a partial-load flash mid-fade. -->
+    <img id="lb-img-a" class="lb-img" alt="" draggable="false" />
+    <img id="lb-img-b" class="lb-img" alt="" draggable="false" />
     <button id="lb-next" class="lb-nav" aria-label="Next photo">›</button>
     <div id="lb-counter"></div>
   </div>
@@ -799,32 +814,107 @@ const calYear = calMonths[0].year;
     const galleryEl = document.getElementById('gallery')!;
 
     // ── Lightbox ──────────────────────────────────────────────────────────────
+    // Two-image crossfade strategy:
+    //   - lbFront and lbBack alternate roles. Only lbFront has the .lb-img-front
+    //     class (opacity 1); lbBack sits invisibly behind.
+    //   - Navigating: preload the new src in a detached Image() so we know when
+    //     it's decoded. Then assign to lbBack and swap classes — CSS does the
+    //     opacity crossfade.
+    //   - navSeq guards against rapid clicks: only the latest navigation actually
+    //     swaps roles, stale loaders no-op.
+    //   - Adjacent images get prefetched so the next/prev click is instant.
     const lightbox  = document.getElementById('lightbox')!;
-    const lbImg     = document.getElementById('lb-img') as HTMLImageElement;
+    const lbA       = document.getElementById('lb-img-a') as HTMLImageElement;
+    const lbB       = document.getElementById('lb-img-b') as HTMLImageElement;
     const lbCounter = document.getElementById('lb-counter')!;
     const allSrcs   = (_raw.photos as string[]);
-    let lbCur = 0;
+    let lbFront: HTMLImageElement = lbA;
+    let lbBack:  HTMLImageElement = lbB;
+    let lbCur = -1;
+    let navSeq = 0;
+
+    const preloadCache = new Set<string>();
+    function preload(src: string) {
+      if (preloadCache.has(src)) return;
+      preloadCache.add(src);
+      const img = new Image();
+      img.src = src;
+    }
+    function preloadNeighbors() {
+      preload(allSrcs[(lbCur + 1) % allSrcs.length]);
+      preload(allSrcs[(lbCur - 1 + allSrcs.length) % allSrcs.length]);
+    }
 
     function lbOpen(idx: number) {
-      lbCur = (idx + allSrcs.length) % allSrcs.length;
-      lbImg.src = allSrcs[lbCur];
-      lbImg.alt = `Photo ${lbCur + 1}`;
+      const newIdx = (idx + allSrcs.length) % allSrcs.length;
+      const mySeq = ++navSeq;
+      lbCur = newIdx;
+      // Reset image stack roles each open so we always start with a clean state
+      lbA.classList.remove('lb-img-front');
+      lbB.classList.remove('lb-img-front');
+      lbFront = lbA;
+      lbBack  = lbB;
+
       lbCounter.textContent = `${lbCur + 1}  /  ${allSrcs.length}`;
       lightbox.classList.add('lb-open');
       document.body.style.overflow = 'hidden';
+
+      // Wait for the image to actually decode before fading it in, so the
+      // opening crossfade reveals the finished picture, not a half-loaded one.
+      const src = allSrcs[lbCur];
+      const loader = new Image();
+      const reveal = () => {
+        if (mySeq !== navSeq) return;
+        lbFront.src = src;
+        lbFront.alt = `Photo ${lbCur + 1}`;
+        requestAnimationFrame(() => {
+          if (mySeq !== navSeq) return;
+          lbFront.classList.add('lb-img-front');
+        });
+      };
+      loader.onload = reveal;
+      loader.onerror = reveal; // commit anyway so the UI doesn't hang
+      loader.src = src;
+
+      preloadNeighbors();
     }
+
     function lbClose() {
       lightbox.classList.remove('lb-open');
       document.body.style.overflow = '';
     }
+
     function lbShow(n: number) {
-      lbCur = (n + allSrcs.length) % allSrcs.length;
-      // Animate image swap
-      lbImg.style.animation = 'none';
-      void lbImg.offsetHeight; // reflow
-      lbImg.style.animation = '';
-      lbImg.src = allSrcs[lbCur];
+      const newIdx = (n + allSrcs.length) % allSrcs.length;
+      if (newIdx === lbCur) return;
+      lbCur = newIdx;
       lbCounter.textContent = `${lbCur + 1}  /  ${allSrcs.length}`;
+
+      const mySeq = ++navSeq;
+      const src = allSrcs[lbCur];
+
+      const crossfade = () => {
+        if (mySeq !== navSeq) return; // a newer nav happened, abandon this one
+        lbBack.src = src;
+        lbBack.alt = `Photo ${lbCur + 1}`;
+        // One frame to let the assignment commit, then toggle classes — the CSS
+        // opacity transition crossfades both images simultaneously.
+        requestAnimationFrame(() => {
+          if (mySeq !== navSeq) return;
+          lbBack.classList.add('lb-img-front');
+          lbFront.classList.remove('lb-img-front');
+          [lbFront, lbBack] = [lbBack, lbFront];
+        });
+      };
+
+      // Use a detached Image() to know when the picture is decoded. If preloaded,
+      // the load event fires from cache near-instantly.
+      const loader = new Image();
+      loader.onload = crossfade;
+      loader.onerror = crossfade;
+      loader.src = src;
+
+      preloadNeighbors();
     }
 
     // Open lightbox on gallery click or "View all" button
