@@ -878,14 +878,18 @@ const amenities = [
       {yFrac:0.29, fill:'rgba(225,100,185,0.34)',  comps:[[12,2.3,0.008,2.0],[6,3.8,0.005,0.3],[4,5.5,0.003,1.4]], engaged:false, engX:0, pullAmt:0, pulses:[], cooldownUntil:0},
       {yFrac:0.36, fill:'rgba(120,140,235,0.36)',  comps:[[17,1.9,0.006,0.8],[8,3.1,0.004,1.6],[5,4.7,0.003,2.7]], engaged:false, engX:0, pullAmt:0, pulses:[], cooldownUntil:0},
     ];
-    var A_ENGAGE_DIST = 28, A_SNAP_DIST = 65;
-    var A_PULL_SCALE  = 0.35, A_PULSE_SPEED = 3.5, A_PULSE_DECAY = 0.008;
+    var A_ENGAGE_DIST = 40, A_SNAP_DIST = 42;
+    // PULL_SCALE 1.4: visual pull = pullAmt × 1.4. With SNAP_DIST=42, max pull = ~59px,
+    // which sits below natural-wave amplitude (~93px) but is clearly visible. Combined
+    // with multi-band engagement (cursor passing through multiple bands engages each),
+    // this finally feels wave-like instead of glitchy.
+    var A_PULL_SCALE  = 1.4, A_PULSE_SPEED = 3.5, A_PULSE_DECAY = 0.008;
     // Amp compensation: held visual = pullAmt * A_PULL_SCALE; released visual at age=0 = releaseAmt * 0.55 * 2.
     // Match the two so there's no spike at snap.
     var A_RELEASE_FACTOR    = A_PULL_SCALE / 1.1;
-    var A_USER_PULSE_DECAY  = 0.014;  // ~1.75× faster fade than tidal/explosion default — cleaner ripples
-    var A_SNAP_COOLDOWN_AT  = 8;       // ≈115ms in aT units (aT advances at ms × 0.069)
-    var A_BELL_HW_FRAC      = 0.30;    // engaged bell width fraction — also used as snap pulse's starting width
+    var A_USER_PULSE_DECAY  = 0.0075; // pulses persist long enough to read as travelling ripples
+    var A_SNAP_COOLDOWN_AT  = 3;      // ≈45ms — short, so sweeping the cursor produces continuous ripples
+    var A_BELL_HW_FRAC      = 0.30;   // engaged bell width fraction — also used as snap pulse's starting width
     var A_TILT = 0.72; // total upward shift across the drawing width
 
     // Curved arch: gentle at left, steepens toward right
@@ -978,28 +982,27 @@ const amenities = [
       layer.cooldownUntil = aT + A_SNAP_COOLDOWN_AT;
     }
 
-    // Engage / snap aurora layers based on cursor position — single layer at a time,
-    // clamped pull magnitude, and gentle release on either snap or band-switch.
+    // Engage / snap aurora layers based on cursor position.
+    // Unlike the rivers, aurora wants MULTI-BAND engagement: the cursor visibly
+    // sweeps across bands stacked vertically (yFrac 0.08→0.36), and the user expects
+    // each band it passes through to ripple — like dragging through actual northern
+    // lights. Single-band engagement (correct for rivers) made the aurora feel
+    // dead because only one band ever reacted at a time. Clamping + short cooldown
+    // still prevents stacking abuse.
     function updateAuroraInteraction(mx, my) {
       if (!auroraActive) return;
-      // Pass 1: find the closest layer (by visual distance to its current natural surface)
-      var closestIdx = -1, closestDist = Infinity;
-      var dists = [];
-      aLayers.forEach(function(layer, i) {
-        var d = Math.abs(my - aLayerY(layer, mx, aT) - aTiltY(mx));
-        dists.push(d);
-        if (d < closestDist) { closestDist = d; closestIdx = i; }
-      });
-      aLayers.forEach(function(layer, i) {
+      aLayers.forEach(function(layer) {
         if (layer.engaged) {
-          if (i !== closestIdx) { releaseAuroraSnap(layer); return; }
           layer.engX = mx;
           var rawPull = my - layer.yFrac * aH - aTiltY(mx);
           // Clamp so a fast move can't spawn a giant pulse on snap
           layer.pullAmt = Math.max(-A_SNAP_DIST, Math.min(A_SNAP_DIST, rawPull));
           if (Math.abs(rawPull) >= A_SNAP_DIST) releaseAuroraSnap(layer);
-        } else if (i === closestIdx && closestDist <= A_ENGAGE_DIST && aT >= layer.cooldownUntil) {
-          layer.engaged = true; layer.engX = mx; layer.pullAmt = 0;
+        } else {
+          var dist = Math.abs(my - aLayerY(layer, mx, aT) - aTiltY(mx));
+          if (dist <= A_ENGAGE_DIST && aT >= layer.cooldownUntil) {
+            layer.engaged = true; layer.engX = mx; layer.pullAmt = 0;
+          }
         }
       });
     }
