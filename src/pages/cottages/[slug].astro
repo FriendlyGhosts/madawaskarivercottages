@@ -118,6 +118,7 @@ export async function getStaticPaths() {
       pets: true,
       photoFolder: 'drone-117',
       photoCount: 11,
+      interiorCount: 12,
       heroPhoto: 10,
       airbnbId: '679589509313140703',
       icalUrl: 'https://www.airbnb.ca/calendar/ical/679589509313140703.ics?t=2406443036c346718124201677870044',
@@ -137,6 +138,7 @@ export async function getStaticPaths() {
       pets: false,
       photoFolder: 'drone-143',
       photoCount: 5,
+      interiorCount: 13,
       heroPhoto: 4,
       airbnbId: '895861420839792739',
       icalUrl: 'https://www.airbnb.ca/calendar/ical/895861420839792739.ics?t=0410eea1e1f54d79b84c49a1a4c43c1a',
@@ -156,6 +158,7 @@ export async function getStaticPaths() {
       pets: false,
       photoFolder: 'drone-157',
       photoCount: 7,
+      interiorCount: 13,
       heroPhoto: 2,
       airbnbId: '1037163450739528690',
       icalUrl: 'https://www.airbnb.ca/calendar/ical/1037163450739528690.ics?t=a7116dfe254144de9345e479c481dddd',
@@ -175,6 +178,7 @@ export async function getStaticPaths() {
       pets: true,
       photoFolder: 'drone-165',
       photoCount: 10,
+      interiorCount: 18,
       heroPhoto: 3,
       airbnbId: null,
       icalUrl: null,
@@ -194,6 +198,7 @@ export async function getStaticPaths() {
       pets: false,
       photoFolder: 'cabin-heaven',
       photoCount: 4,
+      interiorCount: 0,
       heroPhoto: 1,
       airbnbId: '1042917519190055212',
       icalUrl: 'https://www.airbnb.ca/calendar/ical/1042917519190055212.ics?t=2c3e8664ed5f40e987f75f61a727f200',
@@ -225,6 +230,7 @@ interface Props {
   pets: boolean;
   photoFolder: string;
   photoCount: number;
+  interiorCount: number;
   heroPhoto: number;
   airbnbId: string | null;
   rate: number;
@@ -237,12 +243,17 @@ interface Props {
 
 const {
   name, tagline, sleeps, bedDetail, pets,
-  photoFolder, photoCount, heroPhoto, airbnbId, rate,
+  photoFolder, photoCount, interiorCount, heroPhoto, airbnbId, rate,
   longDescription, isTreehouse, features, bookedDates,
 } = Astro.props;
 
 const number = Astro.props.number;
-const photos    = Array.from({ length: photoCount }, (_, i) => `/images/cottages/${photoFolder}-${i + 1}.jpg`);
+// Drone aerials first (visual impact, hero), then interior shots
+const dronePhotos    = Array.from({ length: photoCount },    (_, i) => `/images/cottages/${photoFolder}-${i + 1}.jpg`);
+const interiorPhotos = number
+  ? Array.from({ length: interiorCount }, (_, i) => `/images/cottages/interior-${number}-${i + 1}.jpg`)
+  : [];
+const photos    = [...dronePhotos, ...interiorPhotos];
 const bannerSrc = `/images/cottages/${photoFolder}-${heroPhoto}.jpg`;
 const calMonths = buildSummerCalendar(bookedDates);
 const calYear = calMonths[0].year;
@@ -530,11 +541,11 @@ const calYear = calMonths[0].year;
       loading="eager"
       draggable="false"
     />
-    <button id="gallery-expand" aria-label={`View all ${photoCount} photos`}>
+    <button id="gallery-expand" aria-label={`View all ${photos.length} photos`}>
       <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">
         <path d="M1 5V1h4M9 1h4v4M13 9v4H9M5 13H1V9"/>
       </svg>
-      View all {photoCount} photos
+      View all {photos.length} photos
     </button>
   </div>
 
