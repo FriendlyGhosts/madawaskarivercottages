@@ -1183,6 +1183,18 @@ const amenities = [
     transform: translateY(-100%);
   }
 
+  /* ── Mobile: send sun/moon decorations behind page content ────────────────
+     They're decorative-only on mobile (zen-mode click handlers and sun-rings
+     IIFE already early-exit when navigator.maxTouchPoints > 0). The desktop
+     z-index:2 puts them above section content, which gets in the way of
+     scrolling/reading on a narrow viewport. */
+  @media (max-width: 767px) {
+    #sun, #moon, #sun-rings-wrap {
+      z-index: -1 !important;
+      pointer-events: none !important;
+    }
+  }
+
   /* ── Availability calendar ── */
   .cal-grid {
     display: grid;
