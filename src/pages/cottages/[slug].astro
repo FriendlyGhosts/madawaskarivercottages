@@ -50,9 +50,19 @@ function buildSummerCalendar(bookedDates: string[]) {
   const now = new Date();
   const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
   const booked = new Set(bookedDates);
-  const year = now.getMonth() >= 10 ? now.getFullYear() + 1 : now.getFullYear();
 
-  return [4, 5, 6, 7, 8, 9].map(month => {
+  // Rental season is May (month 4) through October (month 9).
+  // If today is in or before October, show from this month (clamped to May at
+  // the earliest) through October of this year. If today is past October
+  // (Nov/Dec), roll over and show next year's full May–Oct season.
+  const currentMonth = now.getMonth();
+  const isThisYearSeason = currentMonth <= 9;
+  const year = isThisYearSeason ? now.getFullYear() : now.getFullYear() + 1;
+  const startMonth = isThisYearSeason ? Math.max(currentMonth, 4) : 4;
+  const months: number[] = [];
+  for (let m = startMonth; m <= 9; m++) months.push(m);
+
+  return months.map(month => {
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const firstDow    = new Date(year, month, 1).getDay();
     const cells: CalCell[] = [
