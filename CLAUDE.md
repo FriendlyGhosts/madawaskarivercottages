@@ -47,6 +47,14 @@ Displayed in two sections on the page.
 | 157 Harrison Trail | Cedarwood Cabin | 4 | 679589509313140703 | tucked-away |
 | 165 Harrison Trail | Lazy Bear Lodge | 6 | 1705267791513863760 | drone-165 / interior-165 |
 
+### Cottage-specific facts (for listing copy / customer-facing content)
+- **All 4 rental cottages are pet-friendly** (1 pet max, screened by size/weight, breed, temperament). $50/pet fee applies.
+- **Water quality**: Only **117 Whitetail Lodge** has the rust + sulphury smell quirks from the well. **143, 157, and 165** all run clean and clear from their wells. Listing copy should reflect this difference.
+- **None of the rental cottages have a sauna.** The owner's parents own a separate cottage with a sauna ("The Madawaska Lodge", listing ID 1078400080373382488), but it is not in the regular rental rotation and is only rented under extremely rare circumstances. Do not mention sauna in 117/143/157/165 listings or features.
+- **165 Lazy Bear Lodge** sits at the far end of the property (furthest from the owner's homestead) and has the deepest swimming water of any of the docks — divable depth, unlike the other cabins where the water is shallow at the shore.
+- **117 Whitetail Lodge** is the closest cabin to the owner's homestead (just one cabin between them), so it's the suggested cabin for guests who want proximity, and pet owners with energetic dogs may prefer the other cabins for distance from the family's free-range chickens and off-leash livestock guardian dog.
+- **157 Cedarwood Cabin** is the only cottage available year-round (winter rentals possible). The others are May–October only.
+
 ### Section 2 — The Treehouse (in the forest, NOT on the river)
 - **Name:** The Treehouse
 - **Sleeps:** 2, 1 bedroom
@@ -102,5 +110,5 @@ Fresh aerial drone shots for all four riverside cottages, organized by address:
 | Cozy Riverfront Haven | 895861420839792739 |
 | Magical Wintertime Retreat | 1037163450739528690 |
 | Tucked-away Riverside Cottage | 679589509313140703 |
-| The Madawaska Lodge (unlisted, 6 guests, sauna) | 1078400080373382488 |
+| The Madawaska Lodge (owner's parents' cottage; has sauna; NOT in regular rental rotation, rented only under extremely rare circumstances) | 1078400080373382488 |
 | Cabin on the Heaven / The Treehouse | 1042917519190055212 |
