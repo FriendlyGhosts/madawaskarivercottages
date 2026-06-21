@@ -48,7 +48,7 @@ Displayed in two sections on the page.
 | 165 Harrison Trail | Lazy Bear Lodge | 6 | 1705267791513863760 | drone-165 / interior-165 |
 
 ### Cottage-specific facts (for listing copy / customer-facing content)
-- **All 4 rental cottages are pet-friendly** (1 pet max, screened by size/weight, breed, temperament). $50/pet fee applies.
+- **All 5 rental properties are pet-friendly** (all 4 main cottages + the Treehouse). 1 pet max, screened by size/weight, breed, temperament. $50/pet fee applies.
 - **Water quality**: Only **117 Whitetail Lodge** has the rust + sulphury smell quirks from the well. **143, 157, and 165** all run clean and clear from their wells. Listing copy should reflect this difference.
 - **None of the rental cottages have a sauna.** The owner's parents own a separate cottage with a sauna ("The Madawaska Lodge", listing ID 1078400080373382488), but it is not in the regular rental rotation and is only rented under extremely rare circumstances. Do not mention sauna in 117/143/157/165 listings or features.
 - **165 Lazy Bear Lodge** sits at the far end of the property (furthest from the owner's homestead) and has the deepest swimming water of any of the docks — divable depth, unlike the other cabins where the water is shallow at the shore.
