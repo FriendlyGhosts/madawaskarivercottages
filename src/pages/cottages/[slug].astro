@@ -274,12 +274,12 @@ const {
 
 const number = Astro.props.number;
 // Drone aerials first (visual impact, hero), then interior shots
-const dronePhotos    = Array.from({ length: photoCount },    (_, i) => `/images/cottages/${photoFolder}-${i + 1}.jpg`);
+const dronePhotos    = Array.from({ length: photoCount },    (_, i) => `/images/cottages/${photoFolder}-${i + 1}.webp`);
 const interiorPhotos = number
-  ? Array.from({ length: interiorCount }, (_, i) => `/images/cottages/interior-${number}-${i + 1}.jpg`)
+  ? Array.from({ length: interiorCount }, (_, i) => `/images/cottages/interior-${number}-${i + 1}.webp`)
   : [];
 const photos    = [...dronePhotos, ...interiorPhotos];
-const bannerSrc = `/images/cottages/${photoFolder}-${heroPhoto}.jpg`;
+const bannerSrc = `/images/cottages/${photoFolder}-${heroPhoto}.webp`;
 const calMonths = buildSummerCalendar(bookedDates);
 const calYear = calMonths[0].year;
 ---
@@ -574,6 +574,8 @@ const calYear = calMonths[0].year;
       src={bannerSrc}
       alt={`${name} — banner`}
       loading="eager"
+      fetchpriority="high"
+      decoding="async"
       draggable="false"
     />
     <button id="gallery-expand" aria-label={`View all ${photos.length} photos`}>
@@ -802,8 +804,8 @@ const calYear = calMonths[0].year;
          the .lb-img-front class is fully opaque; the other is invisible. We load
          the next picture into the hidden one, wait for it to fully decode, then
          swap the class — so there's never a partial-load flash mid-fade. -->
-    <img id="lb-img-a" class="lb-img" alt="" draggable="false" />
-    <img id="lb-img-b" class="lb-img" alt="" draggable="false" />
+    <img id="lb-img-a" class="lb-img" alt="" draggable="false" decoding="async" />
+    <img id="lb-img-b" class="lb-img" alt="" draggable="false" decoding="async" />
     <button id="lb-next" class="lb-nav" aria-label="Next photo">›</button>
     <div id="lb-counter"></div>
   </div>
@@ -843,16 +845,47 @@ const calYear = calMonths[0].year;
     let lbCur = -1;
     let navSeq = 0;
 
-    const preloadCache = new Set<string>();
-    function preload(src: string) {
-      if (preloadCache.has(src)) return;
-      preloadCache.add(src);
+    // Preload cache stores the actual Image objects so the browser keeps them
+    // alive and decoded — much more reliable than just relying on HTTP cache.
+    const preloadCache = new Map<string, HTMLImageElement>();
+    function preload(src: string): HTMLImageElement {
+      const existing = preloadCache.get(src);
+      if (existing) return existing;
       const img = new Image();
+      img.decoding = 'async';
       img.src = src;
+      // Kick off decode() in the background — this guarantees the image is
+      // GPU-ready by the time we try to display it, so there's no decode hitch
+      // during the crossfade.
+      img.decode().catch(() => { /* ignore — error path handled at display time */ });
+      preloadCache.set(src, img);
+      return img;
     }
     function preloadNeighbors() {
       preload(allSrcs[(lbCur + 1) % allSrcs.length]);
       preload(allSrcs[(lbCur - 1 + allSrcs.length) % allSrcs.length]);
+    }
+    // After the lightbox opens, kick off background preloading of the entire
+    // gallery so any subsequent navigation is instant. Spaced out a touch so we
+    // don't compete with the first image's bandwidth.
+    function preloadAllRemaining() {
+      allSrcs.forEach((src, i) => {
+        if (i === lbCur) return;
+        setTimeout(() => preload(src), 80 * i);
+      });
+    }
+
+    // Promise-based display: wait for the image to fully decode before painting,
+    // then commit the src + opacity swap in a single frame. Using decode() instead
+    // of onload means the browser has already done the GPU work, so the crossfade
+    // can't be interrupted by a late decode hitch.
+    function displayInto(target: HTMLImageElement, src: string, mySeq: number): Promise<void> {
+      const img = preload(src);
+      return img.decode().catch(() => { /* still try */ }).then(() => {
+        if (mySeq !== navSeq) return;
+        target.src = src;
+        return target.decode().catch(() => { /* fall back to onload visibility */ });
+      });
     }
 
     function lbOpen(idx: number) {
@@ -869,24 +902,17 @@ const calYear = calMonths[0].year;
       lightbox.classList.add('lb-open');
       document.body.style.overflow = 'hidden';
 
-      // Wait for the image to actually decode before fading it in, so the
-      // opening crossfade reveals the finished picture, not a half-loaded one.
-      const src = allSrcs[lbCur];
-      const loader = new Image();
-      const reveal = () => {
+      displayInto(lbFront, allSrcs[lbCur], mySeq).then(() => {
         if (mySeq !== navSeq) return;
-        lbFront.src = src;
         lbFront.alt = `Photo ${lbCur + 1}`;
         requestAnimationFrame(() => {
           if (mySeq !== navSeq) return;
           lbFront.classList.add('lb-img-front');
         });
-      };
-      loader.onload = reveal;
-      loader.onerror = reveal; // commit anyway so the UI doesn't hang
-      loader.src = src;
+      });
 
       preloadNeighbors();
+      preloadAllRemaining();
     }
 
     function lbClose() {
@@ -903,26 +929,16 @@ const calYear = calMonths[0].year;
       const mySeq = ++navSeq;
       const src = allSrcs[lbCur];
 
-      const crossfade = () => {
+      displayInto(lbBack, src, mySeq).then(() => {
         if (mySeq !== navSeq) return; // a newer nav happened, abandon this one
-        lbBack.src = src;
         lbBack.alt = `Photo ${lbCur + 1}`;
-        // One frame to let the assignment commit, then toggle classes — the CSS
-        // opacity transition crossfades both images simultaneously.
         requestAnimationFrame(() => {
           if (mySeq !== navSeq) return;
           lbBack.classList.add('lb-img-front');
           lbFront.classList.remove('lb-img-front');
           [lbFront, lbBack] = [lbBack, lbFront];
         });
-      };
-
-      // Use a detached Image() to know when the picture is decoded. If preloaded,
-      // the load event fires from cache near-instantly.
-      const loader = new Image();
-      loader.onload = crossfade;
-      loader.onerror = crossfade;
-      loader.src = src;
+      });
 
       preloadNeighbors();
     }
@@ -930,6 +946,17 @@ const calYear = calMonths[0].year;
     // Open lightbox on gallery click or "View all" button
     galleryEl.addEventListener('click', () => lbOpen(0));
     document.getElementById('gallery-expand')!.addEventListener('click', () => lbOpen(0));
+
+    // Warm the cache as soon as the page is idle so the first lightbox click is
+    // near-instant. Falls back to setTimeout on browsers without requestIdleCallback.
+    const idle = (cb: () => void) =>
+      (window as any).requestIdleCallback
+        ? (window as any).requestIdleCallback(cb, { timeout: 2000 })
+        : setTimeout(cb, 600);
+    idle(() => {
+      // Preload the first few images that the user is most likely to view first.
+      for (let i = 0; i < Math.min(4, allSrcs.length); i++) preload(allSrcs[i]);
+    });
 
     document.getElementById('lb-close')!.addEventListener('click', lbClose);
     document.getElementById('lb-prev')!.addEventListener('click', () => lbShow(lbCur - 1));
